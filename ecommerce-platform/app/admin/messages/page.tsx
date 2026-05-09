@@ -15,8 +15,8 @@ export default function MessagesPage() {
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [reply, setReply] = useState('');
 
-  const load = () => { if (client) setMessages(storage.getMessages(client.id)); };
-  useEffect(load, [client]);
+  const load = async () => { if (client) setMessages(await storage.getMessages(client.id)); };
+  useEffect(() => { load(); }, [client]);
 
   const channelColors: Record<string, string> = { website: 'bg-blue-100 text-blue-700', facebook: 'bg-indigo-100 text-indigo-700', whatsapp: 'bg-green-100 text-green-700', email: 'bg-gray-100 text-gray-700' };
 
@@ -38,24 +38,24 @@ export default function MessagesPage() {
   const selectedMessages = selectedConv ? conversations.get(selectedConv) || [] : [];
   const selectedCustomer = selectedMessages[0]?.customerName;
 
-  const toggleRead = (id: string) => {
+  const toggleRead = async (id: string) => {
     if (!client) return;
     const msg = messages.find(m => m.id === id);
     if (!msg) return;
-    const all = storage.getMessages(client.id);
+    const all = await storage.getMessages(client.id);
     const m = all.find(x => x.id === id);
-    if (m) { m.status = m.status === 'unread' ? 'read' : 'unread'; m.readAt = m.status === 'read' ? new Date().toISOString() : undefined; storage.saveMessages(client.id, all); load(); }
+    if (m) { m.status = m.status === 'unread' ? 'read' : 'unread'; m.readAt = m.status === 'read' ? new Date().toISOString() : undefined; await storage.saveMessages(client.id, all); load(); }
   };
 
-  const sendReply = () => {
+  const sendReply = async () => {
     if (!client || !selectedConv || !reply.trim()) return;
     const firstMsg = selectedMessages[0];
     const msg: Message = { id: generateId(), clientId: client.id, customerId: firstMsg?.customerId, customerName: firstMsg?.customerName || 'Unknown', channel: firstMsg?.channel || 'website', direction: 'outgoing', content: reply.trim(), status: 'replied', tags: [], conversationId: selectedConv, createdAt: new Date().toISOString() };
-    storage.addMessage(client.id, msg);
+    await storage.addMessage(client.id, msg);
     // Mark incoming messages as replied
-    const all = storage.getMessages(client.id);
+    const all = await storage.getMessages(client.id);
     all.forEach(m => { if (m.conversationId === selectedConv && m.direction === 'incoming' && m.status !== 'archived') { m.status = 'replied'; m.repliedAt = new Date().toISOString(); } });
-    storage.saveMessages(client.id, all);
+    await storage.saveMessages(client.id, all);
     setReply(''); load();
   };
 

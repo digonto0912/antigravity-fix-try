@@ -17,35 +17,36 @@ export default function AutoResponsesPage() {
   const [response, setResponse] = useState('');
   const [active, setActive] = useState(true);
 
-  const load = () => { if (client) setResponses(storage.getAutoResponses(client.id)); };
-  useEffect(load, [client]);
+  const load = async () => { if (client) setResponses(await storage.getAutoResponses(client.id)); };
+  useEffect(() => { load(); }, [client]);
 
-  const save = () => {
+  const save = async () => {
     if (!client || !trigger.trim() || !response.trim()) return;
     if (editId) {
-      const all = storage.getAutoResponses(client.id);
+      const all = await storage.getAutoResponses(client.id);
       const idx = all.findIndex(r => r.id === editId);
-      if (idx !== -1) { all[idx] = { ...all[idx], trigger: trigger.trim(), response: response.trim(), isActive: active }; storage.saveAutoResponses(client.id, all); }
+      if (idx !== -1) { all[idx] = { ...all[idx], trigger: trigger.trim(), response: response.trim(), isActive: active }; await storage.saveAutoResponses(client.id, all); }
     } else {
-      storage.addAutoResponse(client.id, { id: generateId(), clientId: client.id, trigger: trigger.trim(), response: response.trim(), isActive: active, timesUsed: 0, createdAt: new Date().toISOString() });
+      await storage.addAutoResponse(client.id, { id: generateId(), clientId: client.id, trigger: trigger.trim(), response: response.trim(), isActive: active, timesUsed: 0, createdAt: new Date().toISOString() });
     }
     closeForm(); load();
   };
 
-  const closeForm = () => { setShowForm(false); setEditId(null); setTrigger(''); setResponse(''); setActive(true); };
+  const closeForm = async () => { setShowForm(false); setEditId(null); setTrigger(''); setResponse(''); setActive(true); };
   const openEdit = (r: AutoResponse) => { setEditId(r.id); setTrigger(r.trigger); setResponse(r.response); setActive(r.isActive); setShowForm(true); };
 
-  const toggleActive = (id: string) => {
+  const toggleActive = async (id: string) => {
     if (!client) return;
-    const all = storage.getAutoResponses(client.id);
+    const all = await storage.getAutoResponses(client.id);
     const r = all.find(x => x.id === id);
-    if (r) { r.isActive = !r.isActive; storage.saveAutoResponses(client.id, all); load(); }
+    if (r) { r.isActive = !r.isActive; await storage.saveAutoResponses(client.id, all); load(); }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!client) return;
-    const all = storage.getAutoResponses(client.id).filter(r => r.id !== id);
-    storage.saveAutoResponses(client.id, all);
+    const allResp = await storage.getAutoResponses(client.id);
+    const all = allResp.filter(r => r.id !== id);
+    await storage.saveAutoResponses(client.id, all);
     load();
   };
 

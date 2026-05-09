@@ -10,22 +10,22 @@ export default function PendingOrdersPage() {
   const { client } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
 
-  const load = () => { if (client) setOrders(storage.getOrders(client.id).filter(o => o.status === 'pending')); };
-  useEffect(load, [client]);
-  useEffect(() => { const t = setInterval(load, 30000); return () => clearInterval(t); }, [client]);
+  const load = async () => { if (client) { const all = await storage.getOrders(client.id); setOrders(all.filter(o => o.status === 'pending')); } };
+  useEffect(() => { load(); }, [client]);
+  useEffect(() => { const t = setInterval(() => { load(); }, 30000); return () => clearInterval(t); }, [client]);
 
-  const process = (id: string) => {
+  const process = async (id: string) => {
     if (!client) return;
     const order = orders.find(o => o.id === id);
     if (!order) return;
-    storage.updateOrder(client.id, id, { status: 'processing', statusHistory: [...(order.statusHistory || []), { status: 'processing', timestamp: new Date().toISOString() }] });
-    load();
+    await storage.updateOrder(client.id, id, { status: 'processing', statusHistory: [...(order.statusHistory || []), { status: 'processing', timestamp: new Date().toISOString() }] });
+    await load();
   };
 
-  const addNote = (id: string, note: string) => {
+  const addNote = async (id: string, note: string) => {
     if (!client) return;
-    storage.updateOrder(client.id, id, { notes: note });
-    load();
+    await storage.updateOrder(client.id, id, { notes: note });
+    await load();
   };
 
   return (

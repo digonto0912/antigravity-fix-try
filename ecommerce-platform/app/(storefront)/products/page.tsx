@@ -16,14 +16,15 @@ export default function ProductsPage() {
   const { addItem } = useCart();
   const [added, setAdded] = useState<string|null>(null);
 
-  useEffect(() => {
-    const cid = storage.getCartClientId();
+  useEffect(() => { const _run = async () => {
+    const cid = await storage.getCartClientId();
     if (!cid) return;
-    const client = storage.getClient(cid);
+    const client = await storage.getClient(cid);
     if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
-    setProducts(storage.getProducts(cid).filter(p => p.status === 'active'));
-    setCategories(storage.getCategories(cid));
-  }, []);
+    const allProds = await storage.getProducts(cid);
+    setProducts(allProds.filter(p => p.status === 'active'));
+    setCategories(await storage.getCategories(cid));
+  }; _run(); }, []);
 
   let filtered = products.filter(p => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;

@@ -19,12 +19,15 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   useEffect(() => {
     if (!client) return;
-    setCategories(storage.getCategories(client.id));
-    const p = storage.getProduct(client.id, id);
-    if (p) {
-      setForm({ name: p.name, sku: p.sku, description: p.description, category: p.category, basePrice: String(p.basePrice), salePrice: p.salePrice ? String(p.salePrice) : '', inventory: String(p.inventory), lowStockThreshold: String(p.lowStockThreshold), purchasePrice: p.purchasePrice ? String(p.purchasePrice) : '', location: p.location || '', slug: p.slug, metaDescription: p.metaDescription || '', status: p.status });
-      setVariants(p.variants);
-    }
+    const init = async () => {
+      setCategories(await storage.getCategories(client.id));
+      const p = await storage.getProduct(client.id, id);
+      if (p) {
+        setForm({ name: p.name, sku: p.sku, description: p.description, category: p.category, basePrice: String(p.basePrice), salePrice: p.salePrice ? String(p.salePrice) : '', inventory: String(p.inventory), lowStockThreshold: String(p.lowStockThreshold), purchasePrice: p.purchasePrice ? String(p.purchasePrice) : '', location: p.location || '', slug: p.slug, metaDescription: p.metaDescription || '', status: p.status });
+        setVariants(p.variants);
+      }
+    };
+    init();
   }, [client, id]);
 
   const addVariant = () => { setVariants([...variants, { id: generateId(), type: '', options: [] }]); };
@@ -42,10 +45,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     return Object.keys(e).length === 0;
   };
 
-  const save = () => {
+  const save = async () => {
     if (!client || !validate()) return;
     setSaving(true);
-    storage.updateProduct(client.id, id, {
+    await storage.updateProduct(client.id, id, {
       name: form.name.trim(), sku: form.sku, description: form.description, category: form.category,
       basePrice: Number(form.basePrice), salePrice: form.salePrice ? Number(form.salePrice) : undefined,
       variants, inventory: Number(form.inventory), lowStockThreshold: Number(form.lowStockThreshold),

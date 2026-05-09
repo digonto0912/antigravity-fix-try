@@ -50,7 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  useEffect(() => { seedData(); }, []);
+  useEffect(() => { seedData().catch(console.error); }, []);
 
   useEffect(() => {
     if (!loading && !client) router.push('/auth/login');

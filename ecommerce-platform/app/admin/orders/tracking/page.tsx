@@ -12,16 +12,16 @@ export default function TrackingPage() {
   const [trackings, setTrackings] = useState<DeliveryTracking[]>([]);
   const [form, setForm] = useState({ orderId: '', courier: 'pathao' as DeliveryTracking['courierService'], trackingNumber: '', deliveryBoyName: '', deliveryBoyPhone: '', estimatedDate: '', deliveryCharge: '60' });
 
-  const load = () => {
+  const load = async () => {
     if (!client) return;
-    setOrders(storage.getOrders(client.id));
-    setTrackings(storage.getDeliveryTrackings(client.id));
+    setOrders(await storage.getOrders(client.id));
+    setTrackings(await storage.getDeliveryTrackings(client.id));
   };
-  useEffect(load, [client]);
+  useEffect(() => { load(); }, [client]);
 
   const processingOrders = orders.filter(o => o.status === 'processing');
 
-  const assign = () => {
+  const assign = async () => {
     if (!client || !form.orderId) return;
     const order = orders.find(o => o.id === form.orderId);
     if (!order) return;
@@ -35,31 +35,31 @@ export default function TrackingPage() {
       deliveryCharge: Number(form.deliveryCharge) || 60, courierPaid: false,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     };
-    storage.addDeliveryTracking(client.id, tracking);
-    storage.updateOrder(client.id, form.orderId, { status: 'shipped', statusHistory: [...(order.statusHistory || []), { status: 'shipped', timestamp: new Date().toISOString() }] });
+    await storage.addDeliveryTracking(client.id, tracking);
+    await storage.updateOrder(client.id, form.orderId, { status: 'shipped', statusHistory: [...(order.statusHistory || []), { status: 'shipped', timestamp: new Date().toISOString() }] });
     setForm({ orderId: '', courier: 'pathao', trackingNumber: '', deliveryBoyName: '', deliveryBoyPhone: '', estimatedDate: '', deliveryCharge: '60' });
-    load();
+    await load();
   };
 
-  const updateTrackingStatus = (id: string, status: DeliveryTracking['status']) => {
+  const updateTrackingStatus = async (id: string, status: DeliveryTracking['status']) => {
     if (!client) return;
     const t = trackings.find(x => x.id === id);
     if (!t) return;
     const history = [...t.statusHistory, { status, timestamp: new Date().toISOString() }];
-    storage.updateDeliveryTracking(client.id, id, { status, statusHistory: history, ...(status === 'delivered' ? { actualDeliveryDate: new Date().toISOString() } : {}) });
-    if (status === 'delivered') storage.updateOrder(client.id, t.orderId, { status: 'delivered', statusHistory: [...((orders.find(o => o.id === t.orderId)?.statusHistory) || []), { status: 'delivered', timestamp: new Date().toISOString() }] });
-    load();
+    await storage.updateDeliveryTracking(client.id, id, { status, statusHistory: history, ...(status === 'delivered' ? { actualDeliveryDate: new Date().toISOString() } : {}) });
+    if (status === 'delivered') await storage.updateOrder(client.id, t.orderId, { status: 'delivered', statusHistory: [...((orders.find(o => o.id === t.orderId)?.statusHistory) || []), { status: 'delivered', timestamp: new Date().toISOString() }] });
+    await load();
   };
 
-  const toggleCOD = (id: string, field: 'codCollected' | 'codRemittedToClient') => {
+  const toggleCOD = async (id: string, field: 'codCollected' | 'codRemittedToClient') => {
     if (!client) return;
     const t = trackings.find(x => x.id === id);
     if (!t) return;
     const update: Partial<DeliveryTracking> = { [field]: !t[field] };
     if (field === 'codCollected') update.codCollectedDate = !t.codCollected ? new Date().toISOString() : undefined;
     if (field === 'codRemittedToClient') update.codRemittanceDate = !t.codRemittedToClient ? new Date().toISOString() : undefined;
-    storage.updateDeliveryTracking(client.id, id, update);
-    load();
+    await storage.updateDeliveryTracking(client.id, id, update);
+    await load();
   };
 
   const codPending = trackings.filter(t => t.codAmount > 0 && !t.codCollected);

@@ -13,8 +13,8 @@ export default function LeadsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const load = () => { if (client) setLeads(storage.getLeads(client.id)); };
-  useEffect(load, [client]);
+  const load = async () => { if (client) setLeads(await storage.getLeads(client.id)); };
+  useEffect(() => { load(); }, [client]);
 
   const filtered = leads.filter(l => {
     if (search && !(l.name || '').toLowerCase().includes(search.toLowerCase()) && !(l.phone || '').includes(search)) return false;
@@ -25,12 +25,12 @@ export default function LeadsPage() {
   const stats = { total: leads.length, hot: leads.filter(l => l.leadStatus === 'hot').length, warm: leads.filter(l => l.leadStatus === 'warm').length, cold: leads.filter(l => l.leadStatus === 'cold').length, converted: leads.filter(l => l.leadStatus === 'converted').length };
   const convRate = stats.total > 0 ? Math.round((stats.converted / stats.total) * 100) : 0;
 
-  const updateStatus = (id: string, status: Lead['leadStatus']) => { if (client) { storage.updateLead(client.id, id, { leadStatus: status }); load(); } };
+  const updateStatus = async (id: string, status: Lead['leadStatus']) => { if (client) { await storage.updateLead(client.id, id, { leadStatus: status }); load(); } };
 
-  const convertToCustomer = (lead: Lead) => {
+  const convertToCustomer = async (lead: Lead) => {
     if (!client || !lead.name) return;
-    storage.addCustomer(client.id, { id: generateId(), clientId: client.id, name: lead.name || 'Unknown', phone: lead.phone || '', email: lead.email, addresses: [], totalOrders: 0, totalSpent: 0, loyaltyPoints: 0, loyaltyHistory: [], tags: ['From Lead'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
-    storage.updateLead(client.id, lead.id, { leadStatus: 'converted' });
+    await storage.addCustomer(client.id, { id: generateId(), clientId: client.id, name: lead.name || 'Unknown', phone: lead.phone || '', email: lead.email, addresses: [], totalOrders: 0, totalSpent: 0, loyaltyPoints: 0, loyaltyHistory: [], tags: ['From Lead'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    await storage.updateLead(client.id, lead.id, { leadStatus: 'converted' });
     load();
   };
 

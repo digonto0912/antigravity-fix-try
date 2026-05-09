@@ -18,8 +18,8 @@ export default function InventoryPage() {
   const [adjQty, setAdjQty] = useState('');
   const [adjNote, setAdjNote] = useState('');
 
-  const load = () => { if (!client) return; setProducts(storage.getProducts(client.id)); setInventory(storage.getInventory(client.id)); };
-  useEffect(load, [client]);
+  const load = async () => { if (!client) return; setProducts(await storage.getProducts(client.id)); setInventory(await storage.getInventory(client.id)); };
+  useEffect(() => { load(); }, [client]);
 
   const totalValue = products.reduce((s, p) => s + (p.purchasePrice || 0) * p.inventory, 0);
   const lowStockCount = products.filter(p => p.inventory > 0 && p.inventory <= p.lowStockThreshold).length;
@@ -34,19 +34,19 @@ export default function InventoryPage() {
 
   const getInvItem = (pid: string) => inventory.find(i => i.productId === pid);
 
-  const handleAdjust = () => {
+  const handleAdjust = async () => {
     if (!client || !adjustModal || !adjQty) return;
     const isNeg = ['sale','damage','theft'].includes(adjType);
     const change = isNeg ? -Math.abs(Number(adjQty)) : Math.abs(Number(adjQty));
     const newStock = Math.max(0, adjustModal.inventory + change);
-    storage.updateProduct(client.id, adjustModal.id, { inventory: newStock });
+    await storage.updateProduct(client.id, adjustModal.id, { inventory: newStock });
     let inv = getInvItem(adjustModal.id);
     if (!inv) {
       inv = { id: generateId(), clientId: client.id, productId: adjustModal.id, productName: adjustModal.name, currentStock: newStock, reorderPoint: adjustModal.lowStockThreshold, reorderQuantity: 50, purchasePrice: adjustModal.purchasePrice || 0, location: adjustModal.location, stockHistory: [], lowStockAlert: newStock <= adjustModal.lowStockThreshold, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-      storage.addInventoryItem(client.id, inv);
+      await storage.addInventoryItem(client.id, inv);
     }
     const entry = { id: generateId(), type: adjType as 'purchase'|'sale'|'damage'|'theft'|'return'|'manual_correction', quantity: change, runningBalance: newStock, date: new Date().toISOString(), note: adjNote || undefined };
-    storage.updateInventoryItem(client.id, inv.id, { currentStock: newStock, stockHistory: [...inv.stockHistory, entry], lowStockAlert: newStock <= adjustModal.lowStockThreshold });
+    await storage.updateInventoryItem(client.id, inv.id, { currentStock: newStock, stockHistory: [...inv.stockHistory, entry], lowStockAlert: newStock <= adjustModal.lowStockThreshold });
     setAdjustModal(null); setAdjQty(''); setAdjNote(''); setAdjType('purchase'); load();
   };
 

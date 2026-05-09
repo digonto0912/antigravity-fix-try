@@ -18,8 +18,8 @@ export default function AccountingPage() {
   const [deleteId, setDeleteId] = useState<string|null>(null);
   const [form, setForm] = useState<{type:'income'|'expense'|'refund';category:string;amount:string;description:string;paymentMethod:'cash'|'bkash'|'nagad'|'bank';date:string}>({ type:'income',category:'Sales',amount:'',description:'',paymentMethod:'cash',date:new Date().toISOString().split('T')[0] });
 
-  const load = () => { if(client) setEntries(storage.getAccountingEntries(client.id)); };
-  useEffect(load,[client]);
+  const load = async () => { if(client) setEntries(await storage.getAccountingEntries(client.id)); };
+  useEffect(() => { load(); },[client]);
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(),now.getMonth(),1);
@@ -40,14 +40,14 @@ export default function AccountingPage() {
   const typeColors: Record<string,string> = { income:'bg-green-100 text-green-700', expense:'bg-red-100 text-red-700', refund:'bg-orange-100 text-orange-700' };
   const getCats = () => { if(form.type==='income') return INCOME_CATEGORIES; if(form.type==='refund') return ['Customer Refund']; return EXPENSE_CATEGORIES; };
 
-  const save = () => {
+  const save = async () => {
     if(!client||!form.amount||!form.description.trim()) return;
     const entry: AccountingEntry = { id:generateId(),clientId:client.id,type:form.type,category:form.category,amount:Number(form.amount),description:form.description.trim(),paymentMethod:form.paymentMethod,date:form.date,createdAt:new Date().toISOString() };
-    storage.addAccountingEntry(client.id,entry);
+    await storage.addAccountingEntry(client.id,entry);
     setShowForm(false); setForm({type:'income',category:'Sales',amount:'',description:'',paymentMethod:'cash',date:new Date().toISOString().split('T')[0]}); load();
   };
 
-  const handleDelete = (id:string) => { if(client) { storage.deleteAccountingEntry(client.id,id); load(); } };
+  const handleDelete = async (id:string) => { if(client) { await storage.deleteAccountingEntry(client.id,id); load(); } };
 
   const exportCSV = () => {
     const rows = ['Date,Type,Category,Amount,Description,Method'];

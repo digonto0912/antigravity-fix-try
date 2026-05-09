@@ -20,11 +20,14 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string,string>>({});
 
   useEffect(() => {
-    const cid = storage.getCartClientId();
-    if (!cid) return;
-    const client = storage.getClient(cid);
-    if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
-    if (client?.shippingSettings) { setShippingRate(client.shippingSettings.flatRate); setFreeThreshold(client.shippingSettings.freeShippingThreshold); }
+    const _run = async () => {
+        const cid = await storage.getCartClientId();
+      if (!cid) return;
+      const client = await storage.getClient(cid);
+      if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
+      if (client?.shippingSettings) { setShippingRate(client.shippingSettings.flatRate); setFreeThreshold(client.shippingSettings.freeShippingThreshold); }
+    };
+    _run();
   }, []);
 
   const shipping = subtotal >= freeThreshold ? 0 : shippingRate;
@@ -39,10 +42,10 @@ export default function CheckoutPage() {
     return Object.keys(e).length === 0;
   };
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (!validate()) return;
     setPlacing(true);
-    const cid = storage.getCartClientId();
+    const cid = await storage.getCartClientId();
     if (!cid) return;
 
     const now = new Date().toISOString();
@@ -50,12 +53,13 @@ export default function CheckoutPage() {
     const custId = generateId();
 
     // Create customer if not exists
-    const existing = storage.getCustomers(cid).find(c => c.phone === form.phone);
+    const allCustomers = await storage.getCustomers(cid);
+    const existing = allCustomers.find(c => c.phone === form.phone);
     if (!existing) {
       const cust: Customer = { id: custId, clientId: cid, name: form.name, phone: form.phone, email: form.email || undefined, addresses: [{ id: generateId(), address: form.address, city: form.city, isDefault: true }], totalOrders: 1, totalSpent: total, loyaltyPoints: Math.floor(total / 100), loyaltyHistory: [{ id: generateId(), points: Math.floor(total / 100), reason: 'Purchase', date: now }], tags: [], createdAt: now, updatedAt: now };
-      storage.addCustomer(cid, cust);
+      await storage.addCustomer(cid, cust);
     } else {
-      storage.updateCustomer(cid, existing.id, { totalOrders: existing.totalOrders + 1, totalSpent: existing.totalSpent + total, loyaltyPoints: existing.loyaltyPoints + Math.floor(total / 100) });
+      await storage.updateCustomer(cid, existing.id, { totalOrders: existing.totalOrders + 1, totalSpent: existing.totalSpent + total, loyaltyPoints: existing.loyaltyPoints + Math.floor(total / 100) });
     }
 
     const order: Order = {
@@ -67,16 +71,16 @@ export default function CheckoutPage() {
       status: 'pending', statusHistory: [{ status: 'pending', timestamp: now }], notes: form.notes || undefined,
       createdAt: now, updatedAt: now,
     };
-    storage.addOrder(cid, order);
+    await storage.addOrder(cid, order);
 
     // Update product stats
-    items.forEach(i => {
-      const p = storage.getProduct(cid, i.productId);
-      if (p) storage.updateProduct(cid, i.productId, { inventory: Math.max(0, p.inventory - i.quantity), purchaseCount: p.purchaseCount + 1 });
-    });
+    for (const i of items) {
+      const p = await storage.getProduct(cid, i.productId);
+      if (p) await storage.updateProduct(cid, i.productId, { inventory: Math.max(0, p.inventory - i.quantity), purchaseCount: p.purchaseCount + 1 });
+    }
 
     // Add accounting entry
-    storage.addAccountingEntry(cid, { id: generateId(), clientId: cid, type: 'income', category: 'Sales', amount: total, description: `Order ${orderNum}`, relatedOrderId: order.id, paymentMethod: form.paymentMethod, date: now, createdAt: now });
+    await storage.addAccountingEntry(cid, { id: generateId(), clientId: cid, type: 'income', category: 'Sales', amount: total, description: `Order ${orderNum}`, relatedOrderId: order.id, paymentMethod: form.paymentMethod, date: now, createdAt: now });
 
     setOrderId(orderNum);
     clearCart();

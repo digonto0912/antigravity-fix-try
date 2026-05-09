@@ -16,15 +16,19 @@ export default function StorefrontHome() {
   const [added, setAdded] = useState<string | null>(null);
 
   useEffect(() => {
-    const cid = storage.getCartClientId();
-    if (!cid) return;
-    const client = storage.getClient(cid);
-    if (client?.storefrontSettings) {
-      setStoreName(client.storefrontSettings.storeName);
-      setTagline(client.storefrontSettings.tagline);
-      setPrimaryColor(client.storefrontSettings.primaryColor);
-    }
-    setProducts(storage.getProducts(cid).filter(p => p.status === 'active').slice(0, 8));
+    const _run = async () => {
+        const cid = await storage.getCartClientId();
+      if (!cid) return;
+      const client = await storage.getClient(cid);
+      if (client?.storefrontSettings) {
+        setStoreName(client.storefrontSettings.storeName);
+        setTagline(client.storefrontSettings.tagline);
+        setPrimaryColor(client.storefrontSettings.primaryColor);
+      }
+      const allProds = await storage.getProducts(cid);
+      setProducts(allProds.filter(p => p.status === 'active').slice(0, 8));
+    };
+    _run();
   }, []);
 
   const handleAdd = (p: Product) => {

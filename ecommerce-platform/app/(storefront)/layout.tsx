@@ -20,15 +20,18 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
   const [mobileMenu, setMobileMenu] = useState(false);
 
   useEffect(() => {
-    seedData();
-    const cid = storage.getCartClientId();
-    if (!cid) return;
-    const client = storage.getClient(cid);
-    if (client?.storefrontSettings) {
-      setStoreName(client.storefrontSettings.storeName);
-      setTagline(client.storefrontSettings.tagline);
-      setPrimaryColor(client.storefrontSettings.primaryColor);
-    }
+    const init = async () => {
+      await seedData();
+      const cid = await storage.getCartClientId();
+      if (!cid) return;
+      const client = await storage.getClient(cid);
+      if (client?.storefrontSettings) {
+        setStoreName(client.storefrontSettings.storeName);
+        setTagline(client.storefrontSettings.tagline);
+        setPrimaryColor(client.storefrontSettings.primaryColor);
+      }
+    };
+    init().catch(console.error);
   }, []);
 
   return (

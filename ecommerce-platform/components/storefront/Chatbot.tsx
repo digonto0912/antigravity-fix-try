@@ -11,13 +11,14 @@ export default function Chatbot() {
   const [storeName, setStoreName] = useState('Store');
   const messagesEnd = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const cid = storage.getCartClientId();
+  useEffect(() => { const _run = async () => {
+    const cid = await storage.getCartClientId();
     if (!cid) return;
-    const client = storage.getClient(cid);
+    const client = await storage.getClient(cid);
     if (client?.storefrontSettings) setStoreName(client.storefrontSettings.storeName);
-    setAutoResponses(storage.getAutoResponses(cid).filter(r => r.isActive));
-  }, []);
+    const allResponses = await storage.getAutoResponses(cid);
+    setAutoResponses(allResponses.filter(r => r.isActive));
+  }; _run(); }, []);
 
   useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 

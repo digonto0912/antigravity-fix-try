@@ -14,32 +14,35 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!client) return;
-    const cid = client.id;
-    const prods = storage.getProducts(cid);
-    const ords = storage.getOrders(cid);
-    const custs = storage.getCustomers(cid);
-    const leads = storage.getLeads(cid);
-    const msgs = storage.getMessages(cid);
-    setProducts(prods);
-    setOrders(ords);
+    const load = async () => {
+      const cid = client.id;
+      const prods = await storage.getProducts(cid);
+      const ords = await storage.getOrders(cid);
+      const custs = await storage.getCustomers(cid);
+      const leads = await storage.getLeads(cid);
+      const msgs = await storage.getMessages(cid);
+      setProducts(prods);
+      setOrders(ords);
 
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today.getTime() - 86400000);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const yesterday = new Date(today.getTime() - 86400000);
 
-    const monthOrders = ords.filter(o => new Date(o.createdAt) >= new Date(now.getFullYear(), now.getMonth(), 1));
-    const revenue = monthOrders.reduce((s, o) => s + o.total, 0);
-    const todayOrders = ords.filter(o => new Date(o.createdAt) >= today);
-    const yesterdayOrders = ords.filter(o => { const d = new Date(o.createdAt); return d >= yesterday && d < today; });
-    const todayRev = todayOrders.reduce((s, o) => s + o.total, 0);
-    const yesterdayRev = yesterdayOrders.reduce((s, o) => s + o.total, 0);
-    const hotLeads = leads.filter(l => l.leadStatus === 'hot').length;
-    const unread = msgs.filter(m => m.status === 'unread').length;
-    const aov = ords.length > 0 ? Math.round(revenue / monthOrders.length) : 0;
-    const abandoned = leads.filter(l => l.cartAbandoned).length;
-    const cartRate = leads.length > 0 ? Math.round((abandoned / leads.length) * 100) : 0;
+      const monthOrders = ords.filter(o => new Date(o.createdAt) >= new Date(now.getFullYear(), now.getMonth(), 1));
+      const revenue = monthOrders.reduce((s, o) => s + o.total, 0);
+      const todayOrders = ords.filter(o => new Date(o.createdAt) >= today);
+      const yesterdayOrders = ords.filter(o => { const d = new Date(o.createdAt); return d >= yesterday && d < today; });
+      const todayRev = todayOrders.reduce((s, o) => s + o.total, 0);
+      const yesterdayRev = yesterdayOrders.reduce((s, o) => s + o.total, 0);
+      const hotLeads = leads.filter(l => l.leadStatus === 'hot').length;
+      const unread = msgs.filter(m => m.status === 'unread').length;
+      const aov = ords.length > 0 ? Math.round(revenue / monthOrders.length) : 0;
+      const abandoned = leads.filter(l => l.cartAbandoned).length;
+      const cartRate = leads.length > 0 ? Math.round((abandoned / leads.length) * 100) : 0;
 
-    setMetrics({ revenue, orderCount: ords.length, productCount: prods.filter(p => p.status === 'active').length, customerCount: custs.length, hotLeads, unreadMessages: unread, todayRevenue: todayRev, yesterdayRevenue: yesterdayRev, avgOrderValue: aov, cartAbandonment: cartRate });
+      setMetrics({ revenue, orderCount: ords.length, productCount: prods.filter(p => p.status === 'active').length, customerCount: custs.length, hotLeads, unreadMessages: unread, todayRevenue: todayRev, yesterdayRevenue: yesterdayRev, avgOrderValue: aov, cartAbandonment: cartRate });
+    };
+    load().catch(console.error);
   }, [client]);
 
   const statusCounts = orders.reduce((acc, o) => { acc[o.status] = (acc[o.status] || 0) + 1; return acc; }, {} as Record<string, number>);

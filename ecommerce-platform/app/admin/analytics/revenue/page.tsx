@@ -3,19 +3,21 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { storage } from '@/lib/storage';
 import { formatCurrency } from '@/lib/utils';
-import type { Order, AccountingEntry } from '@/lib/types';
+import type { Order, AccountingEntry, Product } from '@/lib/types';
 
 export default function RevenueReportsPage() {
   const { client } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [entries, setEntries] = useState<AccountingEntry[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [period, setPeriod] = useState('this_month');
 
-  useEffect(() => {
+  useEffect(() => { const _run = async () => {
     if (!client) return;
-    setOrders(storage.getOrders(client.id));
-    setEntries(storage.getAccountingEntries(client.id));
-  }, [client]);
+    setOrders(await storage.getOrders(client.id));
+    setEntries(await storage.getAccountingEntries(client.id));
+    setProducts(await storage.getProducts(client.id));
+  }; _run(); }, [client]);
 
   // Period calculation
   const now = new Date();
@@ -51,7 +53,6 @@ export default function RevenueReportsPage() {
   const totalRevenue = totalSalesRevenue + otherIncome;
 
   // COGS
-  const products = client ? storage.getProducts(client.id) : [];
   const cogs = periodOrders.reduce((s, o) => {
     return s + o.items.reduce((itemSum, item) => {
       const prod = products.find(p => p.id === item.productId);

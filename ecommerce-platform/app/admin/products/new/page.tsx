@@ -17,7 +17,7 @@ export default function NewProductPage() {
   const [newCat, setNewCat] = useState('');
   const [showNewCat, setShowNewCat] = useState(false);
 
-  useEffect(() => { if (client) setCategories(storage.getCategories(client.id)); }, [client]);
+  useEffect(() => { if (client) storage.getCategories(client.id).then(setCategories); }, [client]);
   useEffect(() => { if (form.name) { setForm(f => ({ ...f, sku: f.sku || generateSKU(form.name), slug: generateSlug(form.name) })); } }, [form.name]);
 
   const addVariant = () => { setVariants([...variants, { id: generateId(), type: '', options: [] }]); };
@@ -26,10 +26,10 @@ export default function NewProductPage() {
   const removeOption = (vIdx: number, oIdx: number) => { const v = [...variants]; v[vIdx].options.splice(oIdx, 1); setVariants(v); };
   const removeVariant = (idx: number) => { setVariants(variants.filter((_, i) => i !== idx)); };
 
-  const addNewCategory = () => {
+  const addNewCategory = async () => {
     if (!client || !newCat.trim()) return;
     const cat: Category = { id: generateId(), clientId: client.id, name: newCat.trim(), displayOrder: categories.length + 1, createdAt: new Date().toISOString() };
-    storage.addCategory(client.id, cat);
+    await storage.addCategory(client.id, cat);
     setCategories([...categories, cat]);
     setForm({ ...form, category: newCat.trim() });
     setNewCat('');
@@ -46,7 +46,7 @@ export default function NewProductPage() {
     return Object.keys(e).length === 0;
   };
 
-  const save = (addAnother: boolean) => {
+  const save = async (addAnother: boolean) => {
     if (!client || !validate()) return;
     setSaving(true);
     const now = new Date().toISOString();
@@ -57,7 +57,7 @@ export default function NewProductPage() {
       purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : undefined, location: form.location, slug: form.slug || generateSlug(form.name),
       metaDescription: form.metaDescription, status: form.status, views: 0, addToCartCount: 0, purchaseCount: 0, createdAt: now, updatedAt: now,
     };
-    storage.addProduct(client.id, product);
+    await storage.addProduct(client.id, product);
     if (addAnother) {
       setForm({ name: '', sku: '', description: '', category: form.category, basePrice: '', salePrice: '', inventory: '0', lowStockThreshold: '10', purchasePrice: '', location: '', slug: '', metaDescription: '', status: 'active' });
       setVariants([]);

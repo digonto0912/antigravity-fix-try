@@ -1,115 +1,341 @@
-import type { Product, Order, Customer, Lead, Message, AutoResponse, Supplier, InventoryItem, AccountingEntry, DeliveryTracking, ProductReview, Category, Client } from './types';
+import { db } from './firebase';
+import {
+  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, query, where
+} from 'firebase/firestore';
+import type {
+  Product, Order, Customer, Lead, Message, AutoResponse, Supplier,
+  InventoryItem, AccountingEntry, DeliveryTracking, ProductReview, Category, Client
+} from './types';
 
-function get<T>(key: string): T | null {
-  if (typeof window === 'undefined') return null;
-  try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : null; } catch { return null; }
+// ============================================
+// Helper: get all docs from a subcollection
+// ============================================
+async function getAll<T>(path: string): Promise<T[]> {
+  const snap = await getDocs(collection(db, path));
+  return snap.docs.map(d => ({ ...d.data() } as T));
 }
-function set(key: string, value: unknown) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* full */ } }
 
+// Helper: get all docs from a subcollection under a client
+async function getClientCol<T>(clientId: string, col: string): Promise<T[]> {
+  return getAll<T>(`clients/${clientId}/${col}`);
+}
+
+// Helper: set a doc in a subcollection (uses item.id as doc ID)
+async function setItem(clientId: string, col: string, item: { id: string;[key: string]: unknown }) {
+  await setDoc(doc(db, `clients/${clientId}/${col}`, item.id), item);
+}
+
+// Helper: update a doc
+async function patchItem(clientId: string, col: string, id: string, updates: Record<string, unknown>) {
+  await updateDoc(doc(db, `clients/${clientId}/${col}`, id), updates);
+}
+
+// Helper: delete a doc
+async function removeItem(clientId: string, col: string, id: string) {
+  await deleteDoc(doc(db, `clients/${clientId}/${col}`, id));
+}
+
+// Helper: save an entire array as individual docs (batch write)
+async function saveAll(clientId: string, col: string, items: { id: string;[key: string]: unknown }[]) {
+  // Delete existing docs first, then write new ones
+  const existing = await getDocs(collection(db, `clients/${clientId}/${col}`));
+  const batch1 = writeBatch(db);
+  existing.docs.forEach(d => batch1.delete(d.ref));
+  await batch1.commit();
+
+  // Write new docs in batches of 500 (Firestore limit)
+  for (let i = 0; i < items.length; i += 500) {
+    const batch = writeBatch(db);
+    items.slice(i, i + 500).forEach(item => {
+      batch.set(doc(db, `clients/${clientId}/${col}`, item.id), item);
+    });
+    await batch.commit();
+  }
+}
+
+// Helper: get a single session ID for cart/spin (stored in localStorage)
+function getSessionId(): string {
+  if (typeof window === 'undefined') return 'ssr';
+  let sid = localStorage.getItem('session_id');
+  if (!sid) {
+    sid = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('session_id', sid);
+  }
+  return sid;
+}
+
+// ============================================
+// STORAGE — Async Firestore-backed
+// ============================================
 export const storage = {
-  // CLIENTS
-  getClients: (): Client[] => get<Client[]>('clients') || [],
-  saveClients: (c: Client[]) => set('clients', c),
-  getClient: (id: string): Client | undefined => (get<Client[]>('clients') || []).find(c => c.id === id),
+  // ---- CLIENTS ----
+  getClients: async (): Promise<Client[]> => {
+    return getAll<Client>('clients');
+  },
+  saveClients: async (clients: Client[]) => {
+    const batch = writeBatch(db);
+    // Clear existing
+    const snap = await getDocs(collection(db, 'clients'));
+    snap.docs.forEach(d => batch.delete(d.ref));
+    clients.forEach(c => batch.set(doc(db, 'clients', c.id), c));
+    await batch.commit();
+  },
+  getClient: async (id: string): Promise<Client | undefined> => {
+    const snap = await getDoc(doc(db, 'clients', id));
+    return snap.exists() ? (snap.data() as Client) : undefined;
+  },
+  addClient: async (client: Client) => {
+    await setDoc(doc(db, 'clients', client.id), client);
+  },
+  updateClientDoc: async (id: string, updates: Partial<Client>) => {
+    await updateDoc(doc(db, 'clients', id), { ...updates, updatedAt: new Date().toISOString() });
+  },
 
-  // PRODUCTS
-  getProducts: (clientId: string): Product[] => get<Product[]>(`products_${clientId}`) || [],
-  saveProducts: (clientId: string, p: Product[]) => set(`products_${clientId}`, p),
-  getProduct: (clientId: string, id: string) => (get<Product[]>(`products_${clientId}`) || []).find(p => p.id === id),
-  addProduct: (clientId: string, p: Product) => { const all = get<Product[]>(`products_${clientId}`) || []; all.push(p); set(`products_${clientId}`, all); },
-  updateProduct: (clientId: string, id: string, u: Partial<Product>) => { const all = get<Product[]>(`products_${clientId}`) || []; const i = all.findIndex(p => p.id === id); if (i !== -1) { all[i] = { ...all[i], ...u, updatedAt: new Date().toISOString() }; set(`products_${clientId}`, all); } },
-  deleteProduct: (clientId: string, id: string) => { const all = (get<Product[]>(`products_${clientId}`) || []).filter(p => p.id !== id); set(`products_${clientId}`, all); },
+  // ---- PRODUCTS ----
+  getProducts: async (clientId: string): Promise<Product[]> => {
+    return getClientCol<Product>(clientId, 'products');
+  },
+  saveProducts: async (clientId: string, p: Product[]) => {
+    await saveAll(clientId, 'products', p as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  getProduct: async (clientId: string, id: string): Promise<Product | undefined> => {
+    const snap = await getDoc(doc(db, `clients/${clientId}/products`, id));
+    return snap.exists() ? (snap.data() as Product) : undefined;
+  },
+  addProduct: async (clientId: string, p: Product) => {
+    await setItem(clientId, 'products', p as unknown as { id: string;[key: string]: unknown });
+  },
+  updateProduct: async (clientId: string, id: string, u: Partial<Product>) => {
+    await patchItem(clientId, 'products', id, { ...u, updatedAt: new Date().toISOString() });
+  },
+  deleteProduct: async (clientId: string, id: string) => {
+    await removeItem(clientId, 'products', id);
+  },
 
-  // CATEGORIES
-  getCategories: (clientId: string): Category[] => get<Category[]>(`categories_${clientId}`) || [],
-  saveCategories: (clientId: string, c: Category[]) => set(`categories_${clientId}`, c),
-  addCategory: (clientId: string, c: Category) => { const all = get<Category[]>(`categories_${clientId}`) || []; all.push(c); set(`categories_${clientId}`, all); },
-  updateCategory: (clientId: string, id: string, u: Partial<Category>) => { const all = get<Category[]>(`categories_${clientId}`) || []; const i = all.findIndex(c => c.id === id); if (i !== -1) { all[i] = { ...all[i], ...u }; set(`categories_${clientId}`, all); } },
-  deleteCategory: (clientId: string, id: string) => { set(`categories_${clientId}`, (get<Category[]>(`categories_${clientId}`) || []).filter(c => c.id !== id)); },
+  // ---- CATEGORIES ----
+  getCategories: async (clientId: string): Promise<Category[]> => {
+    return getClientCol<Category>(clientId, 'categories');
+  },
+  saveCategories: async (clientId: string, c: Category[]) => {
+    await saveAll(clientId, 'categories', c as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  addCategory: async (clientId: string, c: Category) => {
+    await setItem(clientId, 'categories', c as unknown as { id: string;[key: string]: unknown });
+  },
+  updateCategory: async (clientId: string, id: string, u: Partial<Category>) => {
+    await patchItem(clientId, 'categories', id, u);
+  },
+  deleteCategory: async (clientId: string, id: string) => {
+    await removeItem(clientId, 'categories', id);
+  },
 
-  // ORDERS
-  getOrders: (clientId: string): Order[] => get<Order[]>(`orders_${clientId}`) || [],
-  saveOrders: (clientId: string, o: Order[]) => set(`orders_${clientId}`, o),
-  getOrder: (clientId: string, id: string) => (get<Order[]>(`orders_${clientId}`) || []).find(o => o.id === id),
-  addOrder: (clientId: string, o: Order) => { const all = get<Order[]>(`orders_${clientId}`) || []; all.unshift(o); set(`orders_${clientId}`, all); },
-  updateOrder: (clientId: string, id: string, u: Partial<Order>) => { const all = get<Order[]>(`orders_${clientId}`) || []; const i = all.findIndex(o => o.id === id); if (i !== -1) { all[i] = { ...all[i], ...u, updatedAt: new Date().toISOString() }; set(`orders_${clientId}`, all); } },
+  // ---- ORDERS ----
+  getOrders: async (clientId: string): Promise<Order[]> => {
+    return getClientCol<Order>(clientId, 'orders');
+  },
+  saveOrders: async (clientId: string, o: Order[]) => {
+    await saveAll(clientId, 'orders', o as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  getOrder: async (clientId: string, id: string): Promise<Order | undefined> => {
+    const snap = await getDoc(doc(db, `clients/${clientId}/orders`, id));
+    return snap.exists() ? (snap.data() as Order) : undefined;
+  },
+  addOrder: async (clientId: string, o: Order) => {
+    await setItem(clientId, 'orders', o as unknown as { id: string;[key: string]: unknown });
+  },
+  updateOrder: async (clientId: string, id: string, u: Partial<Order>) => {
+    await patchItem(clientId, 'orders', id, { ...u, updatedAt: new Date().toISOString() });
+  },
 
-  // CUSTOMERS
-  getCustomers: (clientId: string): Customer[] => get<Customer[]>(`customers_${clientId}`) || [],
-  saveCustomers: (clientId: string, c: Customer[]) => set(`customers_${clientId}`, c),
-  addCustomer: (clientId: string, c: Customer) => { const all = get<Customer[]>(`customers_${clientId}`) || []; all.push(c); set(`customers_${clientId}`, all); },
-  updateCustomer: (clientId: string, id: string, u: Partial<Customer>) => { const all = get<Customer[]>(`customers_${clientId}`) || []; const i = all.findIndex(c => c.id === id); if (i !== -1) { all[i] = { ...all[i], ...u, updatedAt: new Date().toISOString() }; set(`customers_${clientId}`, all); } },
+  // ---- CUSTOMERS ----
+  getCustomers: async (clientId: string): Promise<Customer[]> => {
+    return getClientCol<Customer>(clientId, 'customers');
+  },
+  saveCustomers: async (clientId: string, c: Customer[]) => {
+    await saveAll(clientId, 'customers', c as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  addCustomer: async (clientId: string, c: Customer) => {
+    await setItem(clientId, 'customers', c as unknown as { id: string;[key: string]: unknown });
+  },
+  updateCustomer: async (clientId: string, id: string, u: Partial<Customer>) => {
+    await patchItem(clientId, 'customers', id, { ...u, updatedAt: new Date().toISOString() });
+  },
 
-  // LEADS
-  getLeads: (clientId: string): Lead[] => get<Lead[]>(`leads_${clientId}`) || [],
-  saveLeads: (clientId: string, l: Lead[]) => set(`leads_${clientId}`, l),
-  addLead: (clientId: string, l: Lead) => { const all = get<Lead[]>(`leads_${clientId}`) || []; all.push(l); set(`leads_${clientId}`, all); },
-  updateLead: (clientId: string, id: string, u: Partial<Lead>) => { const all = get<Lead[]>(`leads_${clientId}`) || []; const i = all.findIndex(l => l.id === id); if (i !== -1) { all[i] = { ...all[i], ...u }; set(`leads_${clientId}`, all); } },
+  // ---- LEADS ----
+  getLeads: async (clientId: string): Promise<Lead[]> => {
+    return getClientCol<Lead>(clientId, 'leads');
+  },
+  saveLeads: async (clientId: string, l: Lead[]) => {
+    await saveAll(clientId, 'leads', l as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  addLead: async (clientId: string, l: Lead) => {
+    await setItem(clientId, 'leads', l as unknown as { id: string;[key: string]: unknown });
+  },
+  updateLead: async (clientId: string, id: string, u: Partial<Lead>) => {
+    await patchItem(clientId, 'leads', id, u);
+  },
 
-  // MESSAGES
-  getMessages: (clientId: string): Message[] => get<Message[]>(`messages_${clientId}`) || [],
-  saveMessages: (clientId: string, m: Message[]) => set(`messages_${clientId}`, m),
-  addMessage: (clientId: string, m: Message) => { const all = get<Message[]>(`messages_${clientId}`) || []; all.unshift(m); set(`messages_${clientId}`, all); },
-  markMessageRead: (clientId: string, id: string) => { const all = get<Message[]>(`messages_${clientId}`) || []; const m = all.find(x => x.id === id); if (m) { m.status = 'read'; m.readAt = new Date().toISOString(); set(`messages_${clientId}`, all); } },
+  // ---- MESSAGES ----
+  getMessages: async (clientId: string): Promise<Message[]> => {
+    return getClientCol<Message>(clientId, 'messages');
+  },
+  saveMessages: async (clientId: string, m: Message[]) => {
+    await saveAll(clientId, 'messages', m as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  addMessage: async (clientId: string, m: Message) => {
+    await setItem(clientId, 'messages', m as unknown as { id: string;[key: string]: unknown });
+  },
+  markMessageRead: async (clientId: string, id: string) => {
+    await patchItem(clientId, 'messages', id, { status: 'read', readAt: new Date().toISOString() });
+  },
 
-  // AUTO RESPONSES
-  getAutoResponses: (clientId: string): AutoResponse[] => get<AutoResponse[]>(`auto_responses_${clientId}`) || [],
-  saveAutoResponses: (clientId: string, a: AutoResponse[]) => set(`auto_responses_${clientId}`, a),
-  addAutoResponse: (clientId: string, a: AutoResponse) => { const all = get<AutoResponse[]>(`auto_responses_${clientId}`) || []; all.push(a); set(`auto_responses_${clientId}`, all); },
+  // ---- AUTO RESPONSES ----
+  getAutoResponses: async (clientId: string): Promise<AutoResponse[]> => {
+    return getClientCol<AutoResponse>(clientId, 'autoResponses');
+  },
+  saveAutoResponses: async (clientId: string, a: AutoResponse[]) => {
+    await saveAll(clientId, 'autoResponses', a as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  addAutoResponse: async (clientId: string, a: AutoResponse) => {
+    await setItem(clientId, 'autoResponses', a as unknown as { id: string;[key: string]: unknown });
+  },
 
-  // SUPPLIERS
-  getSuppliers: (clientId: string): Supplier[] => get<Supplier[]>(`suppliers_${clientId}`) || [],
-  saveSuppliers: (clientId: string, s: Supplier[]) => set(`suppliers_${clientId}`, s),
-  addSupplier: (clientId: string, s: Supplier) => { const all = get<Supplier[]>(`suppliers_${clientId}`) || []; all.push(s); set(`suppliers_${clientId}`, all); },
-  updateSupplier: (clientId: string, id: string, u: Partial<Supplier>) => { const all = get<Supplier[]>(`suppliers_${clientId}`) || []; const i = all.findIndex(s => s.id === id); if (i !== -1) { all[i] = { ...all[i], ...u }; set(`suppliers_${clientId}`, all); } },
-  deleteSupplier: (clientId: string, id: string) => { set(`suppliers_${clientId}`, (get<Supplier[]>(`suppliers_${clientId}`) || []).filter(s => s.id !== id)); },
+  // ---- SUPPLIERS ----
+  getSuppliers: async (clientId: string): Promise<Supplier[]> => {
+    return getClientCol<Supplier>(clientId, 'suppliers');
+  },
+  saveSuppliers: async (clientId: string, s: Supplier[]) => {
+    await saveAll(clientId, 'suppliers', s as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  addSupplier: async (clientId: string, s: Supplier) => {
+    await setItem(clientId, 'suppliers', s as unknown as { id: string;[key: string]: unknown });
+  },
+  updateSupplier: async (clientId: string, id: string, u: Partial<Supplier>) => {
+    await patchItem(clientId, 'suppliers', id, u);
+  },
+  deleteSupplier: async (clientId: string, id: string) => {
+    await removeItem(clientId, 'suppliers', id);
+  },
 
-  // INVENTORY
-  getInventory: (clientId: string): InventoryItem[] => get<InventoryItem[]>(`inventory_${clientId}`) || [],
-  saveInventory: (clientId: string, inv: InventoryItem[]) => set(`inventory_${clientId}`, inv),
-  addInventoryItem: (clientId: string, item: InventoryItem) => { const all = get<InventoryItem[]>(`inventory_${clientId}`) || []; all.push(item); set(`inventory_${clientId}`, all); },
-  updateInventoryItem: (clientId: string, id: string, u: Partial<InventoryItem>) => { const all = get<InventoryItem[]>(`inventory_${clientId}`) || []; const i = all.findIndex(x => x.id === id); if (i !== -1) { all[i] = { ...all[i], ...u, updatedAt: new Date().toISOString() }; set(`inventory_${clientId}`, all); } },
+  // ---- INVENTORY ----
+  getInventory: async (clientId: string): Promise<InventoryItem[]> => {
+    return getClientCol<InventoryItem>(clientId, 'inventory');
+  },
+  saveInventory: async (clientId: string, inv: InventoryItem[]) => {
+    await saveAll(clientId, 'inventory', inv as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  addInventoryItem: async (clientId: string, item: InventoryItem) => {
+    await setItem(clientId, 'inventory', item as unknown as { id: string;[key: string]: unknown });
+  },
+  updateInventoryItem: async (clientId: string, id: string, u: Partial<InventoryItem>) => {
+    await patchItem(clientId, 'inventory', id, { ...u, updatedAt: new Date().toISOString() });
+  },
 
-  // ACCOUNTING
-  getAccountingEntries: (clientId: string): AccountingEntry[] => get<AccountingEntry[]>(`accounting_${clientId}`) || [],
-  saveAccountingEntries: (clientId: string, e: AccountingEntry[]) => set(`accounting_${clientId}`, e),
-  addAccountingEntry: (clientId: string, e: AccountingEntry) => { const all = get<AccountingEntry[]>(`accounting_${clientId}`) || []; all.unshift(e); set(`accounting_${clientId}`, all); },
-  deleteAccountingEntry: (clientId: string, id: string) => { set(`accounting_${clientId}`, (get<AccountingEntry[]>(`accounting_${clientId}`) || []).filter(e => e.id !== id)); },
+  // ---- ACCOUNTING ----
+  getAccountingEntries: async (clientId: string): Promise<AccountingEntry[]> => {
+    return getClientCol<AccountingEntry>(clientId, 'accounting');
+  },
+  saveAccountingEntries: async (clientId: string, e: AccountingEntry[]) => {
+    await saveAll(clientId, 'accounting', e as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  addAccountingEntry: async (clientId: string, e: AccountingEntry) => {
+    await setItem(clientId, 'accounting', e as unknown as { id: string;[key: string]: unknown });
+  },
+  deleteAccountingEntry: async (clientId: string, id: string) => {
+    await removeItem(clientId, 'accounting', id);
+  },
 
-  // DELIVERY TRACKING
-  getDeliveryTrackings: (clientId: string): DeliveryTracking[] => get<DeliveryTracking[]>(`delivery_${clientId}`) || [],
-  saveDeliveryTrackings: (clientId: string, d: DeliveryTracking[]) => set(`delivery_${clientId}`, d),
-  addDeliveryTracking: (clientId: string, d: DeliveryTracking) => { const all = get<DeliveryTracking[]>(`delivery_${clientId}`) || []; all.push(d); set(`delivery_${clientId}`, all); },
-  updateDeliveryTracking: (clientId: string, id: string, u: Partial<DeliveryTracking>) => { const all = get<DeliveryTracking[]>(`delivery_${clientId}`) || []; const i = all.findIndex(d => d.id === id); if (i !== -1) { all[i] = { ...all[i], ...u, updatedAt: new Date().toISOString() }; set(`delivery_${clientId}`, all); } },
+  // ---- DELIVERY TRACKING ----
+  getDeliveryTrackings: async (clientId: string): Promise<DeliveryTracking[]> => {
+    return getClientCol<DeliveryTracking>(clientId, 'delivery');
+  },
+  saveDeliveryTrackings: async (clientId: string, d: DeliveryTracking[]) => {
+    await saveAll(clientId, 'delivery', d as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  addDeliveryTracking: async (clientId: string, d: DeliveryTracking) => {
+    await setItem(clientId, 'delivery', d as unknown as { id: string;[key: string]: unknown });
+  },
+  updateDeliveryTracking: async (clientId: string, id: string, u: Partial<DeliveryTracking>) => {
+    await patchItem(clientId, 'delivery', id, { ...u, updatedAt: new Date().toISOString() });
+  },
 
-  // REVIEWS
-  getReviews: (clientId: string): ProductReview[] => get<ProductReview[]>(`reviews_${clientId}`) || [],
-  saveReviews: (clientId: string, r: ProductReview[]) => set(`reviews_${clientId}`, r),
-  addReview: (clientId: string, r: ProductReview) => { const all = get<ProductReview[]>(`reviews_${clientId}`) || []; all.unshift(r); set(`reviews_${clientId}`, all); },
+  // ---- REVIEWS ----
+  getReviews: async (clientId: string): Promise<ProductReview[]> => {
+    return getClientCol<ProductReview>(clientId, 'reviews');
+  },
+  saveReviews: async (clientId: string, r: ProductReview[]) => {
+    await saveAll(clientId, 'reviews', r as unknown as { id: string;[key: string]: unknown }[]);
+  },
+  addReview: async (clientId: string, r: ProductReview) => {
+    await setItem(clientId, 'reviews', r as unknown as { id: string;[key: string]: unknown });
+  },
 
-  // CART (storefront)
-  getCartClientId: (): string => get<string>('storefront_client_id') || '',
-  setCartClientId: (id: string) => set('storefront_client_id', id),
+  // ---- CART (Firestore-backed, keyed by session) ----
+  getCartItems: async (clientId: string): Promise<{ productId: string; productName: string; image?: string; variant?: Record<string, string>; price: number; quantity: number }[]> => {
+    const sid = getSessionId();
+    const snap = await getDoc(doc(db, `clients/${clientId}/carts`, sid));
+    return snap.exists() ? (snap.data().items || []) : [];
+  },
+  saveCartItems: async (clientId: string, items: unknown[]) => {
+    const sid = getSessionId();
+    await setDoc(doc(db, `clients/${clientId}/carts`, sid), { items, updatedAt: new Date().toISOString() });
+  },
+  clearCartItems: async (clientId: string) => {
+    const sid = getSessionId();
+    await deleteDoc(doc(db, `clients/${clientId}/carts`, sid));
+  },
 
-  // SPIN WHEEL
-  getSpinShown: (): boolean => get<boolean>('spin_wheel_shown') || false,
-  setSpinShown: () => set('spin_wheel_shown', true),
-  getSpinDiscount: () => get<{ discount: number; type: string; expiresAt: number }>('spin_discount'),
-  setSpinDiscount: (d: { discount: number; type: string; expiresAt: number }) => set('spin_discount', d),
-  clearSpinDiscount: () => { try { localStorage.removeItem('spin_discount'); } catch {/* */} },
+  // ---- STOREFRONT CLIENT ID (Firestore) ----
+  getCartClientId: async (): Promise<string> => {
+    const snap = await getDoc(doc(db, 'storefrontConfig', 'default'));
+    return snap.exists() ? (snap.data().clientId || '') : '';
+  },
+  setCartClientId: async (id: string) => {
+    await setDoc(doc(db, 'storefrontConfig', 'default'), { clientId: id });
+  },
 
-  // UTILITY
-  clearAll: () => { if (typeof window !== 'undefined') localStorage.clear(); },
-  exportAll: (): string => {
-    const data: Record<string, unknown> = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k) { try { data[k] = JSON.parse(localStorage.getItem(k)!); } catch { data[k] = localStorage.getItem(k); } }
+  // ---- SPIN WHEEL (Firestore-backed, keyed by session) ----
+  getSpinShown: async (clientId: string): Promise<boolean> => {
+    const sid = getSessionId();
+    const snap = await getDoc(doc(db, `clients/${clientId}/spinWheel`, sid));
+    return snap.exists() ? (snap.data().played || false) : false;
+  },
+  setSpinShown: async (clientId: string) => {
+    const sid = getSessionId();
+    await setDoc(doc(db, `clients/${clientId}/spinWheel`, sid), { played: true, timestamp: new Date().toISOString() }, { merge: true });
+  },
+  getSpinDiscount: async (clientId: string): Promise<{ discount: number; type: string; expiresAt: number } | null> => {
+    const sid = getSessionId();
+    const snap = await getDoc(doc(db, `clients/${clientId}/spinWheel`, sid));
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    return data.discountData || null;
+  },
+  setSpinDiscount: async (clientId: string, d: { discount: number; type: string; expiresAt: number }) => {
+    const sid = getSessionId();
+    await setDoc(doc(db, `clients/${clientId}/spinWheel`, sid), { discountData: d, played: true }, { merge: true });
+  },
+  clearSpinDiscount: async (clientId: string) => {
+    const sid = getSessionId();
+    await setDoc(doc(db, `clients/${clientId}/spinWheel`, sid), { discountData: null }, { merge: true });
+  },
+
+  // ---- UTILITY ----
+  clearAll: async () => {
+    // No-op for Firestore — don't accidentally wipe the database
+  },
+  exportAll: async (): Promise<string> => {
+    // Export all clients and their subcollections
+    const clients = await getAll<Client>('clients');
+    const data: Record<string, unknown> = { clients };
+    for (const c of clients) {
+      const cid = c.id;
+      data[`products_${cid}`] = await getClientCol(cid, 'products');
+      data[`orders_${cid}`] = await getClientCol(cid, 'orders');
     }
     return JSON.stringify(data, null, 2);
   },
-  importAll: (json: string) => {
-    const data = JSON.parse(json);
-    Object.entries(data).forEach(([k, v]) => localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)));
+  importAll: async (_json: string) => {
+    // Not implemented for Firestore — use Firebase console
   },
 };

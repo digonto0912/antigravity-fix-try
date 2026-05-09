@@ -16,8 +16,8 @@ export default function OrdersPage() {
   const [methodFilter, setMethodFilter] = useState('all');
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
 
-  const load = () => { if (client) setOrders(storage.getOrders(client.id)); };
-  useEffect(load, [client]);
+  const load = async () => { if (client) setOrders(await storage.getOrders(client.id)); };
+  useEffect(() => { load(); }, [client]);
 
   const filtered = orders.filter(o => {
     if (search && !o.orderNumber.toLowerCase().includes(search.toLowerCase()) && !o.customerName.toLowerCase().includes(search.toLowerCase()) && !o.customerPhone.includes(search)) return false;
@@ -27,19 +27,19 @@ export default function OrdersPage() {
     return true;
   });
 
-  const updateStatus = (id: string, status: Order['status']) => {
+  const updateStatus = async (id: string, status: Order['status']) => {
     if (!client) return;
     const order = orders.find(o => o.id === id);
     if (!order) return;
     const history = [...(order.statusHistory || []), { status, timestamp: new Date().toISOString() }];
-    storage.updateOrder(client.id, id, { status, statusHistory: history });
-    load();
+    await storage.updateOrder(client.id, id, { status, statusHistory: history });
+    await load();
   };
 
-  const markPaid = (id: string) => {
+  const markPaid = async (id: string) => {
     if (!client) return;
-    storage.updateOrder(client.id, id, { paymentStatus: 'paid' });
-    load();
+    await storage.updateOrder(client.id, id, { paymentStatus: 'paid' });
+    await load();
   };
 
   const exportCSV = () => {

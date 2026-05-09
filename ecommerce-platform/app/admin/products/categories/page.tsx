@@ -15,39 +15,40 @@ export default function CategoriesPage() {
   const [name, setName] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const load = () => { if (client) setCategories(storage.getCategories(client.id).sort((a, b) => a.displayOrder - b.displayOrder)); };
-  useEffect(load, [client]);
+  const load = async () => { if (client) { const cats = await storage.getCategories(client.id); setCategories(cats.sort((a, b) => a.displayOrder - b.displayOrder)); } };
+  useEffect(() => { load(); }, [client]);
 
-  const productCounts = () => {
+  const productCounts = async () => {
     if (!client) return {};
-    const prods = storage.getProducts(client.id);
+    const prods = await storage.getProducts(client.id);
     return prods.reduce((acc, p) => { acc[p.category] = (acc[p.category] || 0) + 1; return acc; }, {} as Record<string, number>);
   };
-  const counts = productCounts();
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  useEffect(() => { productCounts().then(setCounts); }, [client, categories]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!client || !name.trim()) return;
-    storage.addCategory(client.id, { id: generateId(), clientId: client.id, name: name.trim(), displayOrder: categories.length + 1, createdAt: new Date().toISOString() });
-    setName(''); setShowAdd(false); load();
+    await storage.addCategory(client.id, { id: generateId(), clientId: client.id, name: name.trim(), displayOrder: categories.length + 1, createdAt: new Date().toISOString() });
+    setName(''); setShowAdd(false); await load();
   };
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!client || !editId || !name.trim()) return;
     const oldCat = categories.find(c => c.id === editId);
-    storage.updateCategory(client.id, editId, { name: name.trim() });
+    await storage.updateCategory(client.id, editId, { name: name.trim() });
     // Update products with old category name
     if (oldCat) {
-      const prods = storage.getProducts(client.id);
+      const prods = await storage.getProducts(client.id);
       prods.forEach(p => { if (p.category === oldCat.name) p.category = name.trim(); });
-      storage.saveProducts(client.id, prods);
+      await storage.saveProducts(client.id, prods);
     }
-    setName(''); setEditId(null); load();
+    setName(''); setEditId(null); await load();
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!client) return;
-    storage.deleteCategory(client.id, id);
-    load();
+    await storage.deleteCategory(client.id, id);
+    await load();
   };
 
   return (

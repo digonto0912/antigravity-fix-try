@@ -3,19 +3,21 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { storage } from '@/lib/storage';
 import { formatCurrency } from '@/lib/utils';
-import type { Order, Lead } from '@/lib/types';
+import type { Order, Lead, Product } from '@/lib/types';
 
 export default function SalesAnalyticsPage() {
   const { client } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [period, setPeriod] = useState<'7' | '30' | '90' | '365'>('30');
 
-  useEffect(() => {
+  useEffect(() => { const _run = async () => {
     if (!client) return;
-    setOrders(storage.getOrders(client.id));
-    setLeads(storage.getLeads(client.id));
-  }, [client]);
+    setOrders(await storage.getOrders(client.id));
+    setLeads(await storage.getLeads(client.id));
+    setProducts(await storage.getProducts(client.id));
+  }; _run(); }, [client]);
 
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -50,7 +52,6 @@ export default function SalesAnalyticsPage() {
   // Group by product category from actual products
   const productCatRevenue: Record<string, number> = {};
   if (client) {
-    const products = storage.getProducts(client.id);
     orders.forEach(o => {
       o.items.forEach(item => {
         const prod = products.find(p => p.id === item.productId);

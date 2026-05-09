@@ -20,8 +20,8 @@ export default function ProductsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const load = () => { if (client) setProducts(storage.getProducts(client.id)); };
-  useEffect(load, [client]);
+  const load = async () => { if (client) setProducts(await storage.getProducts(client.id)); };
+  useEffect(() => { load(); }, [client]);
 
   const categories = [...new Set(products.map(p => p.category))];
 
@@ -43,16 +43,16 @@ export default function ProductsPage() {
     return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir;
   });
 
-  const handleDelete = (id: string) => { if (client) { storage.deleteProduct(client.id, id); load(); } };
-  const handleDuplicate = (p: Product) => {
+  const handleDelete = async (id: string) => { if (client) { await storage.deleteProduct(client.id, id); await load(); } };
+  const handleDuplicate = async (p: Product) => {
     if (!client) return;
     const dup: Product = { ...p, id: Date.now().toString(36) + Math.random().toString(36).substr(2, 9), name: p.name + ' (Copy)', sku: p.sku + '-COPY', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-    storage.addProduct(client.id, dup);
-    load();
+    await storage.addProduct(client.id, dup);
+    await load();
   };
-  const handleBulkAction = (action: string) => {
+  const handleBulkAction = async (action: string) => {
     if (!client || selected.size === 0) return;
-    const prods = storage.getProducts(client.id);
+    const prods = await storage.getProducts(client.id);
     selected.forEach(id => {
       const idx = prods.findIndex(p => p.id === id);
       if (idx !== -1) {
@@ -60,9 +60,9 @@ export default function ProductsPage() {
         else { prods[idx].status = action as Product['status']; }
       }
     });
-    storage.saveProducts(client.id, prods);
+    await storage.saveProducts(client.id, prods);
     setSelected(new Set());
-    load();
+    await load();
   };
   const toggleAll = () => { if (selected.size === filtered.length) setSelected(new Set()); else setSelected(new Set(filtered.map(p => p.id))); };
 

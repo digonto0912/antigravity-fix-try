@@ -10,7 +10,7 @@ export default function SessionsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedSession, setSelectedSession] = useState<{ lead: Lead; session: SessionRecording } | null>(null);
 
-  useEffect(() => { if (client) setLeads(storage.getLeads(client.id)); }, [client]);
+  useEffect(() => { const _run = async () => { if (client) setLeads(await storage.getLeads(client.id)); }; _run(); }, [client]);
 
   const allSessions = leads.flatMap(l => l.sessionRecordings.map(s => ({ lead: l, session: s }))).sort((a, b) => new Date(b.session.timestamp).getTime() - new Date(a.session.timestamp).getTime());
 

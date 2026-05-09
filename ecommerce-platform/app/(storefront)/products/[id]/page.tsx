@@ -19,19 +19,23 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
-    const cid = storage.getCartClientId();
-    if (!cid) return;
-    const client = storage.getClient(cid);
-    if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
-    const p = storage.getProduct(cid, id);
-    if (p) {
-      setProduct(p);
-      storage.updateProduct(cid, id, { views: p.views + 1 });
-      const defaults: Record<string, string> = {};
-      p.variants.forEach(v => { if (v.options.length > 0) defaults[v.type] = v.options[0]; });
-      setSelectedVariants(defaults);
-      setRelated(storage.getProducts(cid).filter(x => x.status === 'active' && x.category === p.category && x.id !== p.id).slice(0, 4));
-    }
+    const _run = async () => {
+        const cid = await storage.getCartClientId();
+      if (!cid) return;
+      const client = await storage.getClient(cid);
+      if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
+      const p = await storage.getProduct(cid, id);
+      if (p) {
+        setProduct(p);
+        await storage.updateProduct(cid, id, { views: p.views + 1 });
+        const defaults: Record<string, string> = {};
+        p.variants.forEach(v => { if (v.options.length > 0) defaults[v.type] = v.options[0]; });
+        setSelectedVariants(defaults);
+        const allProds = await storage.getProducts(cid);
+        setRelated(allProds.filter(x => x.status === 'active' && x.category === p.category && x.id !== p.id).slice(0, 4));
+      }
+    };
+    _run();
   }, [id]);
 
   if (!product) return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-gray-400">Product not found</div>;
@@ -39,10 +43,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const discount = product.salePrice ? calculateDiscountPercent(product.basePrice, product.salePrice) : 0;
   const price = product.salePrice || product.basePrice;
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     addItem({ productId: product.id, productName: product.name, image: product.images[0], price, quantity, variant: selectedVariants });
-    const cid = storage.getCartClientId();
-    if (cid) storage.updateProduct(cid, product.id, { addToCartCount: product.addToCartCount + 1 });
+    const cid = await storage.getCartClientId();
+    if (cid) await storage.updateProduct(cid, product.id, { addToCartCount: product.addToCartCount + 1 });
     setAdded(true); setTimeout(() => setAdded(false), 2000);
   };
 

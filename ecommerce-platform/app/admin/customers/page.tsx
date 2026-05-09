@@ -17,8 +17,8 @@ export default function CustomersPage() {
   const [points, setPoints] = useState('');
   const [reason, setReason] = useState('');
 
-  const load = () => { if (client) { setCustomers(storage.getCustomers(client.id)); setOrders(storage.getOrders(client.id)); } };
-  useEffect(load, [client]);
+  const load = async () => { if (client) { setCustomers(await storage.getCustomers(client.id)); setOrders(await storage.getOrders(client.id)); } };
+  useEffect(() => { load(); }, [client]);
 
   const filtered = customers.filter(c => {
     if (!search) return true;
@@ -29,12 +29,12 @@ export default function CustomersPage() {
   const viewCustomer = customers.find(c => c.id === viewId);
   const customerOrders = (id: string) => orders.filter(o => o.customerId === id);
 
-  const addPoints = () => {
+  const addPoints = async () => {
     if (!client || !pointsModal || !points) return;
     const cust = customers.find(c => c.id === pointsModal);
     if (!cust) return;
     const entry = { id: generateId(), points: Number(points), reason: reason || 'Manual adjustment', date: new Date().toISOString() };
-    storage.updateCustomer(client.id, pointsModal, { loyaltyPoints: cust.loyaltyPoints + Number(points), loyaltyHistory: [...cust.loyaltyHistory, entry] });
+    await storage.updateCustomer(client.id, pointsModal, { loyaltyPoints: cust.loyaltyPoints + Number(points), loyaltyHistory: [...cust.loyaltyHistory, entry] });
     setPointsModal(null); setPoints(''); setReason(''); load();
   };
 

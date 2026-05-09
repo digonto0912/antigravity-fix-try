@@ -11,7 +11,7 @@ export default function ConversationsPage() {
   const [search, setSearch] = useState('');
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
 
-  useEffect(() => { if (client) setMessages(storage.getMessages(client.id)); }, [client]);
+  useEffect(() => { const _run = async () => { if (client) setMessages(await storage.getMessages(client.id)); }; _run(); }, [client]);
 
   // Group by customer
   const customers = new Map<string, { name: string; messages: Message[]; lastDate: string }>();

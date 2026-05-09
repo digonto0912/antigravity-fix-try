@@ -11,11 +11,11 @@ export default function ProductPerformancePage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [sortBy, setSortBy] = useState<'revenue' | 'units'>('revenue');
 
-  useEffect(() => {
+  useEffect(() => { const _run = async () => {
     if (!client) return;
-    setProducts(storage.getProducts(client.id));
-    setOrders(storage.getOrders(client.id));
-  }, [client]);
+    setProducts(await storage.getProducts(client.id));
+    setOrders(await storage.getOrders(client.id));
+  }; _run(); }, [client]);
 
   // Top selling products
   const productStats = products.map(p => {

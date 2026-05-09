@@ -13,12 +13,12 @@ export default function SignupPage() {
   const { signup } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
     setLoading(true);
-    const result = signup(email, password, businessName);
+    const result = await signup(email, password, businessName);
     if (result.success) {
       router.push('/admin');
     } else {

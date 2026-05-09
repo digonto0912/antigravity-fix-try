@@ -19,32 +19,32 @@ export default function SuppliersPage() {
   const [form, setForm] = useState({ name:'',contactPerson:'',phone:'',email:'',address:'',paymentTerms:'',notes:'' });
   const [payForm, setPayForm] = useState({ amount:'',method:'cash' as 'cash'|'bank_transfer'|'bkash'|'nagad',note:'' });
 
-  const load = () => { if(client) setSuppliers(storage.getSuppliers(client.id)); };
-  useEffect(load,[client]);
+  const load = async () => { if(client) setSuppliers(await storage.getSuppliers(client.id)); };
+  useEffect(() => { load(); },[client]);
 
   const filtered = suppliers.filter(s => !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.phone.includes(search));
 
-  const openEdit = (s:Supplier) => { setEditId(s.id); setForm({name:s.name,contactPerson:s.contactPerson||'',phone:s.phone,email:s.email||'',address:s.address||'',paymentTerms:s.paymentTerms||'',notes:s.notes}); setShowForm(true); };
+  const openEdit = async (s:Supplier) => { setEditId(s.id); setForm({name:s.name,contactPerson:s.contactPerson||'',phone:s.phone,email:s.email||'',address:s.address||'',paymentTerms:s.paymentTerms||'',notes:s.notes}); setShowForm(true); };
   const closeForm = () => { setShowForm(false); setEditId(null); setForm({name:'',contactPerson:'',phone:'',email:'',address:'',paymentTerms:'',notes:''}); };
 
-  const save = () => {
+  const save = async () => {
     if(!client||!form.name.trim()||!form.phone.trim()) return;
-    if(editId) { storage.updateSupplier(client.id,editId,{name:form.name.trim(),contactPerson:form.contactPerson,phone:form.phone,email:form.email,address:form.address,paymentTerms:form.paymentTerms,notes:form.notes}); }
-    else { storage.addSupplier(client.id,{id:generateId(),clientId:client.id,name:form.name.trim(),contactPerson:form.contactPerson,phone:form.phone,email:form.email,address:form.address,paymentTerms:form.paymentTerms,totalPurchases:0,totalPaid:0,outstandingDebt:0,suppliedProducts:[],payments:[],purchaseHistory:[],notes:form.notes,createdAt:new Date().toISOString()}); }
+    if(editId) { await storage.updateSupplier(client.id,editId,{name:form.name.trim(),contactPerson:form.contactPerson,phone:form.phone,email:form.email,address:form.address,paymentTerms:form.paymentTerms,notes:form.notes}); }
+    else { await storage.addSupplier(client.id,{id:generateId(),clientId:client.id,name:form.name.trim(),contactPerson:form.contactPerson,phone:form.phone,email:form.email,address:form.address,paymentTerms:form.paymentTerms,totalPurchases:0,totalPaid:0,outstandingDebt:0,suppliedProducts:[],payments:[],purchaseHistory:[],notes:form.notes,createdAt:new Date().toISOString()}); }
     closeForm(); load();
   };
 
-  const recordPayment = () => {
+  const recordPayment = async () => {
     if(!client||!payModal||!payForm.amount) return;
     const s = suppliers.find(x=>x.id===payModal);
     if(!s) return;
     const amt = Number(payForm.amount);
     const payment = {id:generateId(),amount:amt,date:new Date().toISOString(),method:payForm.method,note:payForm.note||undefined};
-    storage.updateSupplier(client.id,payModal,{totalPaid:s.totalPaid+amt,outstandingDebt:Math.max(0,s.outstandingDebt-amt),payments:[...s.payments,payment]});
+    await storage.updateSupplier(client.id,payModal,{totalPaid:s.totalPaid+amt,outstandingDebt:Math.max(0,s.outstandingDebt-amt),payments:[...s.payments,payment]});
     setPayModal(null); setPayForm({amount:'',method:'cash',note:''}); load();
   };
 
-  const handleDelete = (id:string) => { if(client) { storage.deleteSupplier(client.id,id); load(); } };
+  const handleDelete = async (id:string) => { if(client) { await storage.deleteSupplier(client.id,id); load(); } };
   const viewSupplier = suppliers.find(s=>s.id===viewId);
 
   const debtColor = (d:number) => d===0?'text-green-600':d<10000?'text-yellow-600':'text-red-600';

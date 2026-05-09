@@ -12,11 +12,14 @@ export default function CartPage() {
   const [freeThreshold, setFreeThreshold] = useState(1000);
 
   useEffect(() => {
-    const cid = storage.getCartClientId();
-    if (!cid) return;
-    const client = storage.getClient(cid);
-    if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
-    if (client?.shippingSettings) { setShippingRate(client.shippingSettings.flatRate); setFreeThreshold(client.shippingSettings.freeShippingThreshold); }
+    const _run = async () => {
+        const cid = await storage.getCartClientId();
+      if (!cid) return;
+      const client = await storage.getClient(cid);
+      if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
+      if (client?.shippingSettings) { setShippingRate(client.shippingSettings.flatRate); setFreeThreshold(client.shippingSettings.freeShippingThreshold); }
+    };
+    _run();
   }, []);
 
   const shipping = subtotal >= freeThreshold ? 0 : shippingRate;
