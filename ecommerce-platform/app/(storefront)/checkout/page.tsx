@@ -8,7 +8,7 @@ import type { Order, Customer } from '@/lib/types';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, clearCart } = useCart();
+  const { items, subtotal, clearCart, loaded } = useCart();
   const [step, setStep] = useState(1);
   const [placing, setPlacing] = useState(false);
   const [orderId, setOrderId] = useState('');
@@ -16,7 +16,8 @@ export default function CheckoutPage() {
   const [shippingRate, setShippingRate] = useState(60);
   const [freeThreshold, setFreeThreshold] = useState(1000);
 
-  const [form, setForm] = useState({ name:'',phone:'',email:'',address:'',city:'Dhaka',notes:'',paymentMethod:'cod' as 'cod'|'bkash'|'nagad' });
+  const [enabledPayments, setEnabledPayments] = useState<{v:string;l:string;d:string}[]>([{v:'cod',l:'💵 Cash on Delivery',d:'Pay when you receive'}]);
+  const [form, setForm] = useState({ name:'',phone:'',email:'',address:'',city:'Dhaka',notes:'',paymentMethod:'cod' as 'cod'|'bkash'|'nagad'|'bank' });
   const [errors, setErrors] = useState<Record<string,string>>({});
 
   useEffect(() => {
@@ -26,6 +27,16 @@ export default function CheckoutPage() {
       const client = await storage.getClient(cid);
       if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
       if (client?.shippingSettings) { setShippingRate(client.shippingSettings.flatRate); setFreeThreshold(client.shippingSettings.freeShippingThreshold); }
+      // Build enabled payment methods from admin settings
+      if (client?.paymentSettings) {
+        const ps = client.paymentSettings;
+        const methods: {v:string;l:string;d:string}[] = [];
+        if (ps.cod) methods.push({v:'cod',l:'💵 Cash on Delivery',d:'Pay when you receive'});
+        if (ps.bkash?.enabled) methods.push({v:'bkash',l:'📱 bKash',d:`Send to ${ps.bkash.merchantNumber}`});
+        if (ps.nagad?.enabled) methods.push({v:'nagad',l:'📱 Nagad',d:`Send to ${ps.nagad.merchantNumber}`});
+        if (ps.bankTransfer?.enabled) methods.push({v:'bank',l:'🏦 Bank Transfer',d:'Transfer to bank account'});
+        if (methods.length > 0) setEnabledPayments(methods);
+      }
     };
     _run();
   }, []);
@@ -88,6 +99,15 @@ export default function CheckoutPage() {
     setPlacing(false);
   };
 
+  // Wait for cart to load before redirecting — fixes premature redirect bug
+  if (!loaded) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-16 flex items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500" />
+      </div>
+    );
+  }
+
   if (items.length === 0 && step !== 3) {
     router.push('/cart');
     return null;
@@ -140,10 +160,10 @@ export default function CheckoutPage() {
               <div><label className="text-sm text-gray-600">Order Notes (optional)</label><textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={2} placeholder="Special instructions..." className="w-full mt-1 px-4 py-2.5 border rounded-xl text-sm" /></div>
               <h2 className="font-bold text-lg pt-4">Payment Method</h2>
               <div className="space-y-3">
-                {[{ v: 'cod', l: '💵 Cash on Delivery', d: 'Pay when you receive' }, { v: 'bkash', l: '📱 bKash', d: 'Mobile payment' }, { v: 'nagad', l: '📱 Nagad', d: 'Mobile payment' }].map(m => (
+                {enabledPayments.map(m => (
                   <label key={m.v} className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-colors ${form.paymentMethod === m.v ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
                     <input type="radio" name="payment" checked={form.paymentMethod === m.v} onChange={() => setForm({...form, paymentMethod: m.v as typeof form.paymentMethod})} className="accent-blue-500" />
-                    <div><div className="font-medium text-sm">{m.l}</div><div className="text-xs text-gray-400">{m.d}</div></div>
+                    <div><div className="font-medium text-sm">{m.l}</div><div className="text-xs text-gray-600">{m.d}</div></div>
                   </label>
                 ))}
               </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { seedData } from '@/lib/seed';
+import { storage } from '@/lib/storage';
 import ToastContainer from '@/components/shared/Toast';
 
 const nav = [
@@ -50,10 +51,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  useEffect(() => { seedData().catch(console.error); }, []);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !localStorage.getItem('data_seeded')) {
+      seedData().catch(console.error);
+    }
+  }, []);
 
   useEffect(() => {
     if (!loading && !client) router.push('/auth/login');
+    // Sync storefront to show this admin's products
+    if (client) {
+      storage.setCartClientId(client.id).catch(console.error);
+    }
   }, [client, loading, router]);
 
   if (loading || !client) return <div className="min-h-screen flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500" /></div>;

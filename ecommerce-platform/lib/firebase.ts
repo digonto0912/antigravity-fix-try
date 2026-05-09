@@ -5,6 +5,7 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
@@ -24,6 +25,10 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 // Firestore database
 const db = getFirestore(app);
 
+// Firebase Authentication
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
 // Analytics (client-side only)
 let analytics: ReturnType<typeof getAnalytics> | null = null;
 if (typeof window !== 'undefined') {
@@ -32,4 +37,4 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export { app, db, analytics };
+export { app, db, auth, googleProvider, analytics };

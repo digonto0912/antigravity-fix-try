@@ -3,8 +3,14 @@ import { generateId } from './utils';
 import type { Client, Product, Order, Customer, Lead, Message, AutoResponse, Supplier, AccountingEntry, Category } from './types';
 
 export async function seedData() {
+  // Prevent unnecessary Firestore reads on every navigation
+  if (typeof window !== 'undefined' && localStorage.getItem('data_seeded')) return;
+
   const clients = await storage.getClients();
-  if (clients.length > 0) return;
+  if (clients.length > 0) {
+    if (typeof window !== 'undefined') localStorage.setItem('data_seeded', '1');
+    return;
+  }
 
   const now = new Date().toISOString();
   const cid = generateId();
@@ -116,4 +122,7 @@ export async function seedData() {
 
   // Set storefront client ID
   await storage.setCartClientId(cid);
+
+  // Mark as seeded to prevent re-running
+  if (typeof window !== 'undefined') localStorage.setItem('data_seeded', '1');
 }

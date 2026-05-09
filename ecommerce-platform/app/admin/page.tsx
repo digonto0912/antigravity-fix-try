@@ -59,6 +59,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <p className="text-sm text-gray-600">Real-time metrics from your store data</p>
 
       {/* Top Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -73,7 +74,7 @@ export default function DashboardPage() {
           <div key={m.label} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 mb-2"><span className={`text-xs px-2 py-1 rounded-full ${m.color}`}>{m.icon}</span></div>
             <div className="text-2xl font-bold text-gray-900">{m.value}</div>
-            <div className="text-xs text-gray-500 mt-1">{m.label}</div>
+            <div className="text-xs text-gray-600 mt-1">{m.label}</div>
             {m.sub && <div className="text-xs text-orange-500 mt-1">{m.sub}</div>}
           </div>
         ))}
@@ -82,23 +83,23 @@ export default function DashboardPage() {
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="text-xs text-gray-500">Today vs Yesterday</div>
+          <div className="text-xs text-gray-600">Today vs Yesterday</div>
           <div className="text-xl font-bold">{formatCurrency(metrics.todayRevenue)}</div>
           <div className={`text-sm font-medium ${revChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>{revChange >= 0 ? '↑' : '↓'} {Math.abs(revChange)}%</div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="text-xs text-gray-500">Conversion Rate</div>
-          <div className="text-xl font-bold">3.2%</div>
-          <div className="text-sm text-green-600">↑ 0.5%</div>
+          <div className="text-xs text-gray-600">Conversion Rate</div>
+          <div className="text-xl font-bold">{metrics.hotLeads > 0 ? Math.round((metrics.orderCount / (metrics.hotLeads + metrics.customerCount)) * 100) : 0}%</div>
+          <div className="text-sm text-gray-600">Based on leads → orders</div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="text-xs text-gray-500">Avg Order Value</div>
+          <div className="text-xs text-gray-600">Avg Order Value</div>
           <div className="text-xl font-bold">{formatCurrency(metrics.avgOrderValue)}</div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="text-xs text-gray-500">Cart Abandonment</div>
+          <div className="text-xs text-gray-600">Cart Abandonment</div>
           <div className="text-xl font-bold">{metrics.cartAbandonment}%</div>
-          <div className="text-sm text-red-600">↑ 2.1%</div>
+          <div className="text-sm text-gray-600">From lead tracking</div>
         </div>
       </div>
 

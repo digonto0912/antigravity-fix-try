@@ -1,71 +1,58 @@
-# Task Tracker
+# E-Commerce Platform Fix — Task Tracker
 
-## Phase 1: Foundation
-- [/] `lib/storage.ts` — All localStorage CRUD + seed data
-- [ ] `app/globals.css` — Design system variables
+## Phase 1: Fix Admin Input Focus Loss ✅
+- [x] Extract shared `FormField` component
+- [x] Fix `products/new/page.tsx` — removed inline Field, useCallback handlers, SKU/slug on blur
+- [x] Fix `suppliers/page.tsx` — modal inputs (form pattern is stable in modals)
+- [x] Fix `accounting/page.tsx` — modal inputs (form pattern is stable in modals)
 
-## Phase 2: Hooks & Auth
-- [ ] `hooks/useAuth.ts`
-- [ ] `hooks/useCart.ts`
-- [ ] `hooks/useToast.ts`
-- [ ] `app/auth/login/page.tsx`
-- [ ] `app/auth/signup/page.tsx`
+## Phase 2: Fix Checkout Redirect ✅
+- [x] Wait for cart `loaded` before redirect check
+- [x] Show only admin-enabled payment methods (dynamic from paymentSettings)
+- [x] Added bank transfer option
+- [x] Ensure order saves correctly
 
-## Phase 3: Shared Components
-- [ ] `components/shared/Toast.tsx`
-- [ ] `components/shared/Modal.tsx`
-- [ ] `components/shared/Badge.tsx`
-- [ ] `components/shared/ConfirmDialog.tsx`
-- [ ] `components/shared/LoadingSpinner.tsx`
-- [ ] `components/shared/EmptyState.tsx`
+## Phase 3: Fix Auto-Refresh ✅
+- [x] Add localStorage guard to `seedData()`
+- [x] Remove `seedData()` from storefront layout
+- [x] Gate admin layout seed call behind localStorage check
 
-## Phase 4: Admin Layout & Dashboard
-- [ ] `app/admin/layout.tsx`
-- [ ] `app/admin/page.tsx`
+## Phase 4: Client-Admin Data Sync ✅
+- [x] Set storefront client ID on admin login (admin layout effect)
+- [x] Both sides read from same Firestore — verified sync works
 
-## Phase 5: Products & Catalog
-- [ ] `app/admin/products/page.tsx`
-- [ ] `app/admin/products/new/page.tsx`
-- [ ] `app/admin/products/[id]/edit/page.tsx`
-- [ ] `app/admin/products/categories/page.tsx`
+## Phase 5: Google OAuth ✅
+- [x] Add Firebase Auth exports (auth, googleProvider)
+- [x] Add `loginWithGoogle` to useAuth (creates Client on first sign-in)
+- [x] Update login page with Google button + SVG branding
+- [x] Update signup page with Google button
 
-## Phase 6: Orders & Fulfillment
-- [ ] `app/admin/orders/page.tsx`
-- [ ] `app/admin/orders/pending/page.tsx`
-- [ ] `app/admin/orders/tracking/page.tsx`
+## Phase 6: Dashboard Metrics & UI Contrast ✅
+- [x] Remove hardcoded conversion rate (3.2%, 0.5%)
+- [x] Remove hardcoded cart abandonment change (2.1%)
+- [x] Calculate real conversion rate from leads → orders
+- [x] Fix contrast: text-gray-400/500 → text-gray-600 for labels
 
-## Phase 7: Customers, Messages, Analytics
-- [ ] `app/admin/customers/page.tsx`
-- [ ] `app/admin/customers/leads/page.tsx`
-- [ ] `app/admin/customers/sessions/page.tsx`
-- [ ] `app/admin/messages/page.tsx`
-- [ ] `app/admin/messages/auto-responses/page.tsx`
-- [ ] `app/admin/messages/conversations/page.tsx`
-- [ ] `app/admin/analytics/sales/page.tsx`
-- [ ] `app/admin/analytics/revenue/page.tsx`
-- [ ] `app/admin/analytics/products/page.tsx`
+## Phase 7: Fix Product Creation + Cloudinary ✅
+- [x] Set up Cloudinary upload API route (/api/upload)
+- [x] Add image upload to product form (file picker + URL input)
+- [x] Fix save/save-draft flow (useCallback, proper error handling)
+- [x] Add success toast/message
 
-## Phase 8: Operations & Settings
-- [ ] `app/admin/operations/inventory/page.tsx`
-- [ ] `app/admin/operations/suppliers/page.tsx`
-- [ ] `app/admin/operations/accounting/page.tsx`
-- [ ] `app/admin/operations/settings/page.tsx`
+## Phase 8: Lead Tracking System ✅
+- [x] Create fingerprint utility (canvas + browser signals)
+- [x] Create useTracking hook (page views, products, time, cart abandonment)
+- [x] Create tracking API route (MongoDB storage)
+- [x] Update leads page with dashboard summary banner
+- [x] Fix "Convert to Customer" button (with error handling + data merge)
 
-## Phase 9: Storefront
-- [ ] `app/(storefront)/layout.tsx`
-- [ ] `app/(storefront)/page.tsx`
-- [ ] `app/(storefront)/products/page.tsx`
-- [ ] `app/(storefront)/products/[id]/page.tsx`
-- [ ] `app/(storefront)/cart/page.tsx`
-- [ ] `app/(storefront)/checkout/page.tsx`
+## Phase 9: Session Recording ✅
+- [x] Install rrweb, mongodb, cloudinary packages
+- [x] Create MongoDB client (multi-cluster with hash-based routing)
+- [x] Create sessions API routes (POST/GET/DELETE with auto-purge)
+- [x] Create useSessionRecorder hook (rrweb record + buffer + sendBeacon)
+- [x] Update sessions admin page with rrweb-player + grouped by user
+- [x] Integrate recorder in storefront layout
 
-## Phase 10: Psychological Triggers
-- [ ] `components/storefront/SpinWheel.tsx`
-- [ ] `components/storefront/StockTicker.tsx`
-- [ ] `components/storefront/Notifications.tsx`
-- [ ] `components/storefront/Chatbot.tsx`
-
-## Final
-- [ ] Update root `app/page.tsx`
-- [ ] Update root `app/layout.tsx`
-- [ ] Build verification
+## Build Verification ✅
+- [x] `npm run build` — 32/32 routes, 0 errors
