@@ -1,0 +1,71 @@
+# Task Tracker
+
+## Phase 1: Foundation
+- [/] `lib/storage.ts` — All localStorage CRUD + seed data
+- [ ] `app/globals.css` — Design system variables
+
+## Phase 2: Hooks & Auth
+- [ ] `hooks/useAuth.ts`
+- [ ] `hooks/useCart.ts`
+- [ ] `hooks/useToast.ts`
+- [ ] `app/auth/login/page.tsx`
+- [ ] `app/auth/signup/page.tsx`
+
+## Phase 3: Shared Components
+- [ ] `components/shared/Toast.tsx`
+- [ ] `components/shared/Modal.tsx`
+- [ ] `components/shared/Badge.tsx`
+- [ ] `components/shared/ConfirmDialog.tsx`
+- [ ] `components/shared/LoadingSpinner.tsx`
+- [ ] `components/shared/EmptyState.tsx`
+
+## Phase 4: Admin Layout & Dashboard
+- [ ] `app/admin/layout.tsx`
+- [ ] `app/admin/page.tsx`
+
+## Phase 5: Products & Catalog
+- [ ] `app/admin/products/page.tsx`
+- [ ] `app/admin/products/new/page.tsx`
+- [ ] `app/admin/products/[id]/edit/page.tsx`
+- [ ] `app/admin/products/categories/page.tsx`
+
+## Phase 6: Orders & Fulfillment
+- [ ] `app/admin/orders/page.tsx`
+- [ ] `app/admin/orders/pending/page.tsx`
+- [ ] `app/admin/orders/tracking/page.tsx`
+
+## Phase 7: Customers, Messages, Analytics
+- [ ] `app/admin/customers/page.tsx`
+- [ ] `app/admin/customers/leads/page.tsx`
+- [ ] `app/admin/customers/sessions/page.tsx`
+- [ ] `app/admin/messages/page.tsx`
+- [ ] `app/admin/messages/auto-responses/page.tsx`
+- [ ] `app/admin/messages/conversations/page.tsx`
+- [ ] `app/admin/analytics/sales/page.tsx`
+- [ ] `app/admin/analytics/revenue/page.tsx`
+- [ ] `app/admin/analytics/products/page.tsx`
+
+## Phase 8: Operations & Settings
+- [ ] `app/admin/operations/inventory/page.tsx`
+- [ ] `app/admin/operations/suppliers/page.tsx`
+- [ ] `app/admin/operations/accounting/page.tsx`
+- [ ] `app/admin/operations/settings/page.tsx`
+
+## Phase 9: Storefront
+- [ ] `app/(storefront)/layout.tsx`
+- [ ] `app/(storefront)/page.tsx`
+- [ ] `app/(storefront)/products/page.tsx`
+- [ ] `app/(storefront)/products/[id]/page.tsx`
+- [ ] `app/(storefront)/cart/page.tsx`
+- [ ] `app/(storefront)/checkout/page.tsx`
+
+## Phase 10: Psychological Triggers
+- [ ] `components/storefront/SpinWheel.tsx`
+- [ ] `components/storefront/StockTicker.tsx`
+- [ ] `components/storefront/Notifications.tsx`
+- [ ] `components/storefront/Chatbot.tsx`
+
+## Final
+- [ ] Update root `app/page.tsx`
+- [ ] Update root `app/layout.tsx`
+- [ ] Build verification
