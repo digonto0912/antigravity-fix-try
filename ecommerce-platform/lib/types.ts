@@ -333,7 +333,7 @@ export interface AccountingEntry {
   relatedSupplierId?: string;
   invoiceNumber?: string;
   receiptUrl?: string;
-  paymentMethod: 'cash' | 'bkash' | 'nagad' | 'bank';
+  paymentMethod: 'cash' | 'cod' | 'bkash' | 'nagad' | 'bank';
   paidBy?: string;
   date: string;
   createdAt: string;
