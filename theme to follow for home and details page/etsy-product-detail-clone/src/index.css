@@ -1,0 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #312b36;
+  --color-primary-light: #665e5c;
+  --color-primary-lighter: #736b68;
+  --color-accent-yellow: #ffc340;
+  --color-accent-green: #4e7728;
+  --color-accent-green-dark: #406221;
+  --color-accent-red: #c7102f;
+  --color-bg-primary: #faf8f5;
+  --color-bg-secondary: #efecea;
+  --color-bg-blue: #d2dff2;
+  --color-border: #928681;
+  --color-border-light: #e0dad6;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Georgia", "Cambria", serif;
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-primary text-primary font-sans antialiased;
+  }
+}
+
+.product-thumbnail-active {
+  @apply border-2 border-primary opacity-100;
+}
+
+.collapsible-content {
+  @apply overflow-hidden transition-all duration-300 ease-in-out;
+}

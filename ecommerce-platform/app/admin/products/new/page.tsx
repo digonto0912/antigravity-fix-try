@@ -166,19 +166,19 @@ export default function NewProductPage() {
         description: form.description,
         category: form.category,
         basePrice: Number(form.basePrice),
-        salePrice: form.salePrice ? Number(form.salePrice) : undefined,
+        salePrice: form.salePrice ? Number(form.salePrice) : null,
         images,
         variants,
         inventory: Number(form.inventory) || 0,
         lowStockThreshold: Number(form.lowStockThreshold) || 10,
-        purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : undefined,
-        location: form.location,
+        purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : null,
+        location: form.location || '',
         slug: form.slug || generateSlug(form.name),
-        metaDescription: form.metaDescription,
+        metaDescription: form.metaDescription || '',
         status: form.status,
         views: 0, addToCartCount: 0, purchaseCount: 0,
         createdAt: now, updatedAt: now,
-      };
+      } as Product;
       await storage.addProduct(client.id, product);
 
       if (addAnother) {

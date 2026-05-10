@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Etsy - Shop for handmade, vintage, custom, and unique gifts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Droid+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* ===== DESIGN TOKENS ===== */
+    :root {
+      --color-bg: #faf8f5;
+      --color-dark: #312b36;
+      --color-orange: #f1641e;
+      --color-footer-bg: #2f203c;
+      --color-newsletter-bg: #ded3e8;
+      --color-hero-beige: #f1e8c8;
+      --color-hero-brown: #934f21;
+      --color-border: #e0dad6;
+      --color-border-subtle: #928681;
+      --color-muted: #736b68;
+      --color-footer-border: #534d4c;
+      --color-white: #ffffff;
+      --color-overlay-tint: rgba(51, 20, 0, 0.05);
+
+      --font-serif: Cambria, Georgia, 'Times New Roman', serif;
+      --font-sans: 'Droid Sans', Arial, sans-serif;
+
+      --fs-xs: 13px;
+      --fs-sm: 14px;
+      --fs-base: 15px;
+      --fs-md: 16px;
+      --fs-lg: 22px;
+      --fs-xl: 23px;
+      --fs-hero: 48px;
+
+      --lh-tight: 20px;
+      --lh-normal: 19.6px;
+      --lh-hero: 48px;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-pill: 24px;
+      --radius-full: 9999px;
+
+      --shadow-card: 0px 2px 8px 0px rgba(21,10,4,0.04), 0px 4px 12px 2px rgba(21,10,4,0.06);
+      --shadow-btn: 0px 8px 16px 0px rgba(21,10,4,0.04), 0px 12px 20px 2px rgba(21,10,4,0.06);
+      --shadow-inset: inset 1px 2px 4px 0px rgba(51,20,0,0.05);
+
+      --header-height: 60px;
+      --secondary-nav-height: 47px;
+    }
+
+    /* ===== RESET ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-sans); background: var(--color-bg); color: var(--color-dark); min-height: 100vh; }
+    a { text-decoration: none; color: inherit; }
+    ul, ol { list-style: none; }
+    img { display: block; max-width: 100%; height: auto; }
+    button { font-family: var(--font-sans); cursor: pointer; border: none; background: none; }
+
+    /* ===== CONTAINERS ===== */
+    .container {
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .container--narrow {
+      width: 100%;
+      max-width: 1328px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: var(--color-bg);
+      height: var(--header-height);
+    }
+
+    .header__inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 100%;
+      padding: 0 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header__logo {
+      flex-shrink: 0;
+      height: 40px;
+      width: 80px;
+    }
+    .header__logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .header__categories {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px 12px 8px 8px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .header__categories img {
+      width: 16px;
+      height: 16px;
+    }
+    .header__categories span {
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: var(--fs-xs);
+      color: var(--color-dark);
+      letter-spacing: 0.13px;
+    }
+
+    .header__search {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      height: 48px;
+      border: 2px solid var(--color-dark);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      min-width: 0;
+    }
+    .header__search-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      padding: 0 18px;
+      font-family: var(--font-sans);
+      font-size: 15.6px;
+      color: var(--color-muted);
+      height: 100%;
+    }
+    .header__search-btn {
+      width: 49px;
+      height: 44px;
+      background: var(--color-orange);
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin: 2px;
+      cursor: pointer;
+      border: none;
+    }
+    .header__search-btn img {
+      width: 24px;
+      height: 24px;
+    }
+
+    .header__actions {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-shrink: 0;
+    }
+    .header__sign-in {
+      font-weight: 700;
+      font-size: 13.5px;
+      letter-spacing: 0.13px;
+      color: var(--color-dark);
+      white-space: nowrap;
+    }
+    .header__icon {
+      width: 24px;
+      height: 24px;
+    }
+    .header__icon img {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Hamburger (mobile) */
+    .header__hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      width: 24px;
+      height: 18px;
+      cursor: pointer;
+      padding: 0;
+      background: none;
+      border: none;
+      flex-shrink: 0;
+    }
+    .header__hamburger span {
+      display: block;
+      width: 100%;
+      height: 2px;
+      background: var(--color-dark);
+      border-radius: 2px;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .header__hamburger[aria-expanded="true"] span:nth-child(1) {
+      transform: translateY(8px) rotate(45deg);
+    }
+    .header__hamburger[aria-expanded="true"] span:nth-child(2) {
+      opacity: 0;
+    }
+    .header__hamburger[aria-expanded="true"] span:nth-child(3) {
+      transform: translateY(-8px) rotate(-45deg);
+    }
+
+    /* ===== SECONDARY NAV ===== */
+    .secondary-nav {
+      background: var(--color-bg);
+      height: var(--secondary-nav-height);
+      border-bottom: 1px solid var(--color-border);
+      position: sticky;
+      top: var(--header-height);
+      z-index: 199;
+    }
+
+    .secondary-nav__inner {
+      display: flex;
+      align-items: center;
+      height: 100%;
+      gap: 4px;
+      padding: 0 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .secondary-nav__inner::-webkit-scrollbar { display: none; }
+
+    .secondary-nav__item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      font-weight: 700;
+      font-size: var(--fs-sm);
+      letter-spacing: 0.13px;
+      color: var(--color-dark);
+      flex-shrink: 0;
+    }
+    .secondary-nav__item:hover { background: rgba(0,0,0,0.04); }
+    .secondary-nav__item--icon {
+      gap: 6px;
+    }
+    .secondary-nav__item--icon img {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Mobile nav overlay */
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      right: 0;
+      background: var(--color-white);
+      z-index: 198;
+      border-bottom: 1px solid var(--color-border);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease, padding 0.35s ease;
+    }
+    .mobile-nav.is-open {
+      max-height: 500px;
+    }
+    .mobile-nav__list {
+      padding: 16px 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mobile-nav__item a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--color-dark);
+    }
+    .mobile-nav__item a:hover { background: rgba(0,0,0,0.04); }
+
+    /* ===== MAIN ===== */
+    .main {
+      padding-bottom: 40px;
+    }
+
+    /* ===== HERO SECTION ===== */
+    .hero {
+      padding: 24px 0;
+    }
+    .hero__inner {
+      max-width: 1328px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .hero__grid {
+      display: flex;
+      gap: 16px;
+      height: 400px;
+    }
+
+    /* Left hero panel */
+    .hero__left {
+      flex: 0 0 68%;
+      background: var(--color-hero-beige);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: stretch;
+    }
+    .hero__left-content {
+      flex: 0 0 55%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 36px 40px 48px;
+    }
+    .hero__heading {
+      font-family: var(--font-serif);
+      font-size: var(--fs-hero);
+      font-weight: 400;
+      font-style: normal;
+      line-height: var(--lh-hero);
+      letter-spacing: -0.96px;
+      color: var(--color-dark);
+      margin-bottom: 28px;
+    }
+    .hero__cta {
+      display: inline-block;
+      background: var(--color-dark);
+      color: var(--color-bg);
+      font-weight: 700;
+      font-size: 15.1px;
+      letter-spacing: -0.16px;
+      padding: 14px 24px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+    }
+    .hero__left-img {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero__left-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    /* Right hero panel */
+    .hero__right {
+      flex: 1;
+      background: var(--color-hero-brown);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      padding: 24px 20px;
+    }
+    .hero__right::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(14,14,14,0) 48%, rgba(14,14,14,0.67) 100%);
+      border-radius: var(--radius-sm);
+    }
+    .hero__right-content {
+      position: relative;
+      z-index: 1;
+    }
+    .hero__right-title {
+      font-weight: 700;
+      font-size: 22.3px;
+      letter-spacing: -0.48px;
+      color: #fff;
+      line-height: 33.6px;
+      margin-bottom: 6px;
+    }
+    .hero__right-link {
+      font-weight: 700;
+      font-size: 15.5px;
+      letter-spacing: -0.16px;
+      color: #fff;
+    }
+
+    /* ===== SECTION HEADINGS ===== */
+    .section-heading {
+      font-weight: 700;
+      font-size: var(--fs-xl);
+      letter-spacing: -0.48px;
+      color: var(--color-dark);
+      line-height: 33.6px;
+      margin-bottom: 16px;
+    }
+
+    /* ===== FEATURED INTERESTS ===== */
+    .featured-interests {
+      padding: 24px 0 0;
+    }
+    .featured-interests__inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .interests-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .interest-card {
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .interest-card:hover { transform: translateY(-2px); }
+
+    .interest-card--selected {
+      outline: 2px solid var(--color-dark);
+      box-shadow: var(--shadow-card);
+    }
+
+    .interest-card__image {
+      height: 398px;
+      border-radius: var(--radius-sm);
+      position: relative;
+    }
+    .interest-card--goblincore .interest-card__image { background: #322424; }
+    .interest-card--sayyes .interest-card__image { background: rgba(0,0,0,0.15); }
+    .interest-card--cherry .interest-card__image { background: #606060; }
+    .interest-card--inky .interest-card__image { background: #3b4a6b; }
+
+    .interest-card__footer {
+      padding: 10px 8px 8px;
+      text-align: center;
+      background: var(--color-bg);
+    }
+    .interest-card--selected .interest-card__footer { background: var(--color-white); }
+
+    .interest-card__name {
+      font-weight: 700;
+      font-size: 15.1px;
+      letter-spacing: -0.16px;
+      color: var(--color-dark);
+      line-height: 20px;
+    }
+    .interest-card__sub {
+      font-size: 13.7px;
+      color: var(--color-dark);
+      letter-spacing: 0.13px;
+      line-height: 19.6px;
+      margin-top: 2px;
+    }
+
+    /* ===== SPRING 2026 SECTION ===== */
+    .spring-section {
+      padding: 32px 0 0;
+    }
+    .spring-section__inner {
+      max-width: 1354px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .spring-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .spring-card {
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .spring-card:hover { transform: translateY(-2px); }
+
+    .spring-card__image {
+      height: 240px;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      background: #c8cac5;
+      position: relative;
+      overflow: hidden;
+    }
+    .spring-card__image::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.08);
+    }
+
+    .spring-card__label {
+      padding: 6px 4px 4px;
+      font-weight: 700;
+      font-size: 15.5px;
+      letter-spacing: -0.16px;
+      color: var(--color-dark);
+      line-height: 20px;
+    }
+
+    /* ===== EID SECTION ===== */
+    .eid-section {
+      padding: 36px 0 0;
+    }
+    .eid-section__inner {
+      max-width: 1328px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .eid-section__left {
+      flex: 0 0 auto;
+      width: 310px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding-top: 4px;
+    }
+    .eid-section__title {
+      font-weight: 700;
+      font-size: 22.9px;
+      letter-spacing: -0.48px;
+      line-height: 28.8px;
+      color: var(--color-dark);
+      margin-bottom: 16px;
+    }
+    .eid-section__btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-overlay-tint);
+      color: var(--color-dark);
+      font-weight: 700;
+      font-size: 14.9px;
+      letter-spacing: -0.16px;
+      padding: 13px 22px;
+      border-radius: var(--radius-pill);
+      border: none;
+      cursor: pointer;
+      width: fit-content;
+    }
+    .eid-section__btn:hover { background: rgba(51,20,0,0.08); }
+
+    .eid-section__right {
+      flex: 1;
+    }
+    .eid-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      height: 251px;
+    }
+
+    .eid-card {
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+    }
+    .eid-card__bg {
+      position: absolute;
+      inset: 0;
+      background: #888;
+    }
+    .eid-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(14,14,14,0) 48%, rgba(14,14,14,0.57) 100%);
+    }
+    .eid-card__label {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 1;
+      font-weight: 700;
+      font-size: 14.9px;
+      letter-spacing: -0.16px;
+      color: var(--color-bg);
+      line-height: 20px;
+    }
+
+    /* ===== PRODUCT CARDS ===== */
+    .products-section {
+      padding: 12px 0 0;
+    }
+    .products-section__inner {
+      max-width: 1354px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+    }
+
+    .product-card {
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.2);
+      cursor: pointer;
+      position: relative;
+      height: 164px;
+    }
+
+    .product-card__bg {
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius-sm);
+    }
+    .product-card--1 .product-card__bg { background: #521c11; }
+    .product-card--2 .product-card__bg { background: #6d8797; }
+    .product-card--3 .product-card__bg { background: #1b7f6d; }
+    .product-card--4 .product-card__bg { background: #aaadad; }
+    .product-card--5 .product-card__bg { background: #d6d0c9; }
+    .product-card--6 .product-card__bg { background: #e4d4c3; }
+
+    .product-card__img-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 65%;
+      height: 100%;
+      background: rgba(0,0,0,0.15);
+      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    }
+
+    .product-card__price {
+      position: absolute;
+      bottom: 6px;
+      left: 6px;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-pill);
+      padding: 4px 8px;
+      font-weight: 700;
+      font-size: var(--fs-sm);
+      color: var(--color-dark);
+      line-height: 14px;
+      white-space: nowrap;
+    }
+    .product-card__price-original {
+      font-weight: 400;
+      font-size: var(--fs-sm);
+      color: var(--color-dark);
+      margin-left: 4px;
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      background: var(--color-footer-bg);
+    }
+
+    /* Newsletter */
+    .newsletter {
+      background: var(--color-newsletter-bg);
+      padding: 36px 24px;
+    }
+    .newsletter__text {
+      font-weight: 700;
+      font-size: 14.8px;
+      letter-spacing: -0.16px;
+      color: var(--color-dark);
+      text-align: center;
+      line-height: 20px;
+      margin-bottom: 16px;
+    }
+    .newsletter__form {
+      display: flex;
+      max-width: 480px;
+      margin: 0 auto;
+      height: 48px;
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      box-shadow: var(--shadow-inset);
+    }
+    .newsletter__input {
+      flex: 1;
+      border: 1px solid var(--color-border-subtle);
+      border-right: none;
+      border-radius: var(--radius-full) 0 0 var(--radius-full);
+      outline: none;
+      padding: 0 18px;
+      font-family: var(--font-sans);
+      font-size: 15.1px;
+      color: var(--color-muted);
+      background: var(--color-bg);
+    }
+    .newsletter__btn {
+      padding: 0 22px;
+      background: transparent;
+      border: 1px solid var(--color-border-subtle);
+      border-left: none;
+      border-radius: 0 var(--radius-full) var(--radius-full) 0;
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: 15.8px;
+      letter-spacing: -0.16px;
+      color: var(--color-dark);
+      cursor: pointer;
+      white-space: nowrap;
+      background: var(--color-bg);
+    }
+    .newsletter__btn:hover { background: #f0ece7; }
+
+    /* Renewable energy banner */
+    .renewable-banner {
+      background: var(--color-footer-bg);
+      border-bottom: 1px solid var(--color-footer-border);
+      height: 83px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .renewable-banner img {
+      width: 32px;
+      height: 32px;
+    }
+    .renewable-banner__text {
+      font-size: 15.6px;
+      letter-spacing: -0.16px;
+      color: var(--color-bg);
+      line-height: 20px;
+    }
+
+    /* Footer columns */
+    .footer-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-app {
+      flex: 0 0 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .footer-app__icon {
+      width: 72px;
+      height: 72px;
+      background: var(--color-orange);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .footer-app__icon img {
+      width: 60px;
+      height: 60px;
+    }
+    .footer-app__btn {
+      background: #545a78;
+      color: var(--color-bg);
+      font-weight: 700;
+      font-size: 15.3px;
+      letter-spacing: -0.16px;
+      padding: 14px 18px;
+      border-radius: var(--radius-pill);
+      text-align: center;
+      white-space: nowrap;
+      display: inline-block;
+    }
+    .footer-app__btn:hover { background: #4a5068; }
+
+    .footer-nav {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .footer-col__heading {
+      font-weight: 700;
+      font-size: var(--fs-md);
+      letter-spacing: -0.16px;
+      color: var(--color-bg);
+      line-height: 20px;
+      margin-bottom: 16px;
+    }
+    .footer-col__list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .footer-col__item {
+      font-size: var(--fs-sm);
+      color: var(--color-bg);
+      line-height: 19.6px;
+      cursor: pointer;
+    }
+    .footer-col__item:hover { text-decoration: underline; }
+
+    .footer-social {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .footer-social img {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* Footer bottom bar */
+    .footer-bottom {
+      background: var(--color-footer-bg);
+      border-top: 1px solid var(--color-footer-border);
+      padding: 0 20px;
+      height: 75px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: 100%;
+    }
+    .footer-bottom__inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .footer-bottom__region {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 12.8px;
+      letter-spacing: 0.13px;
+      color: var(--color-bg);
+    }
+    .footer-bottom__region img {
+      width: 16px;
+      height: 16px;
+    }
+    .footer-bottom__copyright {
+      font-size: var(--fs-sm);
+      color: var(--color-bg);
+      line-height: 19.6px;
+    }
+    .footer-bottom__links {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .footer-bottom__link {
+      font-size: var(--fs-sm);
+      color: var(--color-bg);
+      text-decoration: underline;
+      line-height: 19.6px;
+      cursor: pointer;
+    }
+
+    /* ===== RESPONSIVE: TABLET ===== */
+    @media (max-width: 1024px) {
+      .header__categories span { display: none; }
+      .hero__grid { height: auto; flex-direction: column; }
+      .hero__left { flex: 0 0 auto; height: 300px; }
+      .hero__right { flex: 0 0 auto; height: 220px; }
+      .interests-grid { grid-template-columns: repeat(2, 1fr); }
+      .interest-card__image { height: 260px; }
+      .spring-grid { grid-template-columns: repeat(3, 1fr); }
+      .spring-card__image { height: 180px; }
+      .eid-section__inner { flex-direction: column; }
+      .eid-section__left { width: 100%; }
+      .eid-cards-grid { height: auto; }
+      .eid-card { height: 180px; }
+      .products-grid { grid-template-columns: repeat(3, 1fr); }
+      .footer-content { flex-direction: column; }
+      .footer-app { flex: 0 0 auto; flex-direction: row; align-items: center; }
+      .footer-bottom__inner { flex-direction: column; align-items: flex-start; gap: 12px; height: auto; padding: 16px 0; }
+      .footer-bottom { height: auto; }
+
+      /* Show hamburger, hide desktop categories */
+      .header__hamburger { display: flex; }
+      .mobile-nav { display: block; }
+      .secondary-nav { display: none; }
+    }
+
+    @media (max-width: 768px) {
+      .header__sign-in { display: none; }
+      .hero__left { height: 260px; }
+      .hero__left-content { padding: 24px 20px; }
+      .hero__heading { font-size: 32px; line-height: 36px; }
+      .interests-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .interest-card__image { height: 200px; }
+      .spring-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .spring-card:last-child { display: none; }
+      .spring-card__image { height: 150px; }
+      .eid-cards-grid { grid-template-columns: repeat(1, 1fr); }
+      .eid-card { height: 160px; }
+      .products-grid { grid-template-columns: repeat(2, 1fr); }
+      .footer-nav { grid-template-columns: repeat(2, 1fr); }
+      .footer-bottom__links { gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="header" role="banner">
+  <div class="header__inner">
+
+    <!-- Hamburger (mobile only) -->
+    <button class="header__hamburger" id="hamburger-btn" aria-expanded="false" aria-controls="mobile-nav" aria-label="Toggle navigation menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <!-- Logo -->
+    <a href="#" class="header__logo" aria-label="Etsy homepage">
+      <img src="https://www.figma.com/api/mcp/asset/0677249a-0467-4e2a-871c-7ba0d8ae8d27" alt="Etsy logo">
+    </a>
+
+    <!-- Categories button -->
+    <button class="header__categories" aria-label="Browse categories">
+      <img src="https://www.figma.com/api/mcp/asset/83941f2e-a5d2-4c2a-a33c-09385b50e5b9" alt="">
+      <span>Categories</span>
+    </button>
+
+    <!-- Search bar -->
+    <div class="header__search" role="search">
+      <label for="site-search" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Search for anything</label>
+      <input class="header__search-input" id="site-search" type="search" placeholder="Search for anything" aria-label="Search for anything">
+      <button class="header__search-btn" aria-label="Submit search">
+        <img src="https://www.figma.com/api/mcp/asset/f18e8cdf-e4e4-4ed3-9d3a-6f5fb3d67ce4" alt="Search icon">
+      </button>
+    </div>
+
+    <!-- Actions -->
+    <nav class="header__actions" aria-label="User actions">
+      <a href="#" class="header__sign-in">Sign in</a>
+      <a href="#" class="header__icon" aria-label="Favorites">
+        <img src="https://www.figma.com/api/mcp/asset/49a4ee5e-898e-4641-99d7-8667717b5cab" alt="Favorites">
+      </a>
+      <a href="#" class="header__icon" aria-label="Cart">
+        <img src="https://www.figma.com/api/mcp/asset/a03b03b6-e1a0-4f13-8ff2-9c4a66164b2d" alt="Cart">
+      </a>
+    </nav>
+
+  </div>
+</header>
+
+<!-- Mobile Navigation Overlay -->
+<nav class="mobile-nav" id="mobile-nav" aria-label="Main navigation" role="navigation">
+  <ul class="mobile-nav__list">
+    <li class="mobile-nav__item"><a href="#"><img src="https://www.figma.com/api/mcp/asset/055ce78e-2c90-4d23-b6bd-2ff717a25818" alt="" width="16" height="16"> Gifts</a></li>
+    <li class="mobile-nav__item"><a href="#">Top 100 Gifts for Mom</a></li>
+    <li class="mobile-nav__item"><a href="#">Home Favorites</a></li>
+    <li class="mobile-nav__item"><a href="#">Fashion Finds</a></li>
+    <li class="mobile-nav__item"><a href="#">Vintage</a></li>
+    <li class="mobile-nav__item"><a href="#">Registry</a></li>
+  </ul>
+</nav>
+
+<!-- ===== SECONDARY NAV ===== -->
+<nav class="secondary-nav" aria-label="Category navigation">
+  <div class="secondary-nav__inner">
+    <a href="#" class="secondary-nav__item secondary-nav__item--icon">
+      <img src="https://www.figma.com/api/mcp/asset/055ce78e-2c90-4d23-b6bd-2ff717a25818" alt="">
+      Gifts
+    </a>
+    <a href="#" class="secondary-nav__item">Top 100 Gifts for Mom</a>
+    <a href="#" class="secondary-nav__item">Home Favorites</a>
+    <a href="#" class="secondary-nav__item">Fashion Finds</a>
+    <a href="#" class="secondary-nav__item">Vintage</a>
+    <a href="#" class="secondary-nav__item">Registry</a>
+  </div>
+</nav>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main class="main" id="main-content">
+
+  <!-- HERO SECTION -->
+  <section class="hero" aria-label="Featured promotions">
+    <div class="hero__inner">
+      <div class="hero__grid">
+
+        <!-- Left: Quick creative gifts for Mom -->
+        <article class="hero__left">
+          <div class="hero__left-content">
+            <h1 class="hero__heading">Quick, creative gifts for Mom</h1>
+            <a href="#" class="hero__cta">Shop for downloads</a>
+          </div>
+          <div class="hero__left-img">
+            <img
+              src="https://www.figma.com/api/mcp/asset/fcd17ee8-328f-4f09-bcc2-e9a38d7e6b4c"
+              alt="Printable Mom questionnaire gift idea"
+              style="width:100%;height:100%;object-fit:cover;"
+            >
+          </div>
+        </article>
+
+        <!-- Right: Rising sellers -->
+        <article class="hero__right">
+          <div class="hero__right-content">
+            <h2 class="hero__right-title">Rising sellers you'll want to get to know</h2>
+            <a href="#" class="hero__right-link">Shop now</a>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED INTERESTS -->
+  <section class="featured-interests" aria-labelledby="featured-heading">
+    <div class="featured-interests__inner">
+      <h2 class="section-heading" id="featured-heading">Jump into featured interests</h2>
+      <ul class="interests-grid">
+
+        <li>
+          <a href="#" class="interest-card interest-card--goblincore" aria-label="Goblincore - Forest-themed finds">
+            <div class="interest-card__image"></div>
+            <div class="interest-card__footer">
+              <div class="interest-card__name">Goblincore</div>
+              <div class="interest-card__sub">Forest-themed finds</div>
+            </div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="interest-card interest-card--sayyes interest-card--selected" aria-label="Say Yes! - In just their style">
+            <div class="interest-card__image"></div>
+            <div class="interest-card__footer">
+              <div class="interest-card__name">Say Yes!</div>
+              <div class="interest-card__sub">In just their style</div>
+            </div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="interest-card interest-card--cherry" aria-label="Cherry Picked - Adorable fruit finds">
+            <div class="interest-card__image"></div>
+            <div class="interest-card__footer">
+              <div class="interest-card__name">Cherry Picked</div>
+              <div class="interest-card__sub">Adorable fruit finds</div>
+            </div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="interest-card interest-card--inky" aria-label="Inky Blue Hues - All twilight tones">
+            <div class="interest-card__image"></div>
+            <div class="interest-card__footer">
+              <div class="interest-card__name">Inky Blue Hues</div>
+              <div class="interest-card__sub">All twilight tones</div>
+            </div>
+          </a>
+        </li>
+
+      </ul>
+    </div>
+  </section>
+
+  <!-- SPRING 2026 SECTION -->
+  <section class="spring-section" aria-labelledby="spring-heading">
+    <div class="spring-section__inner">
+      <h2 class="section-heading" id="spring-heading">Discover our best of spring 2026</h2>
+      <ul class="spring-grid">
+
+        <li>
+          <a href="#" class="spring-card" aria-label="Y2K Revival">
+            <div class="spring-card__image" style="background:#b8bdb8;"></div>
+            <div class="spring-card__label">Y2K Revival</div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="spring-card" aria-label="Outdoor Entertaining">
+            <div class="spring-card__image" style="background:#c4c8c0;"></div>
+            <div class="spring-card__label">Outdoor Entertaining</div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="spring-card" aria-label="Special Wedding Gifts">
+            <div class="spring-card__image" style="background:#cbc8c2;"></div>
+            <div class="spring-card__label">Special Wedding Gifts</div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="spring-card" aria-label="May Birthstone Finds">
+            <div class="spring-card__image" style="background:#bfc4be;"></div>
+            <div class="spring-card__label">May Birthstone Finds</div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="spring-card" aria-label="Learn a New Skill">
+            <div class="spring-card__image" style="background:#c2c5bf;"></div>
+            <div class="spring-card__label">Learn a New Skill</div>
+          </a>
+        </li>
+
+      </ul>
+    </div>
+  </section>
+
+  <!-- EID GIFTS SECTION -->
+  <section class="eid-section" aria-labelledby="eid-heading">
+    <div class="eid-section__inner">
+
+      <div class="eid-section__left">
+        <h2 class="eid-section__title" id="eid-heading">Etsy-special gifts for Eid</h2>
+        <a href="#" class="eid-section__btn">Get inspired</a>
+      </div>
+
+      <div class="eid-section__right">
+        <ul class="eid-cards-grid">
+
+          <li>
+            <a href="#" class="eid-card" style="display:block;height:100%;" aria-label="Kids' Tasbih">
+              <div class="eid-card__bg" style="background:#7a8a7a;"></div>
+              <div class="eid-card__label">Kids' Tasbih</div>
+            </a>
+          </li>
+
+          <li>
+            <a href="#" class="eid-card" style="display:block;height:100%;" aria-label="Handmade Pottery">
+              <div class="eid-card__bg" style="background:#8a9a8a;"></div>
+              <div class="eid-card__label">Handmade Pottery</div>
+            </a>
+          </li>
+
+          <li>
+            <a href="#" class="eid-card" style="display:block;height:100%;" aria-label="Arabic Name Necklaces">
+              <div class="eid-card__bg" style="background:#9aaa9a;"></div>
+              <div class="eid-card__label">Arabic Name Necklaces</div>
+            </a>
+          </li>
+
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- EID PRODUCT CARDS -->
+  <section class="products-section" aria-label="Eid gift products">
+    <div class="products-section__inner">
+      <ul class="products-grid">
+
+        <li>
+          <a href="#" class="product-card product-card--1" aria-label="30 Piece Bundle Decorative Heirloom Garland – USD 280.00">
+            <div class="product-card__bg"></div>
+            <div class="product-card__img-placeholder"></div>
+            <div class="product-card__price">USD 280.00</div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="product-card product-card--2" aria-label="Praying Mat Cookie Cutter – USD 20.31">
+            <div class="product-card__bg"></div>
+            <div class="product-card__img-placeholder"></div>
+            <div class="product-card__price">USD 20.31</div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="product-card product-card--3" aria-label="Personalised Wooden First Eid Decoration – USD 11.39">
+            <div class="product-card__bg"></div>
+            <div class="product-card__img-placeholder"></div>
+            <div class="product-card__price">USD 11.39</div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="product-card product-card--4" aria-label="Handmade Ceramic Islamic Bakhoor Burner – USD 50.70">
+            <div class="product-card__bg"></div>
+            <div class="product-card__img-placeholder"></div>
+            <div class="product-card__price">USD 50.70</div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="product-card product-card--5" aria-label="Arabic Name Necklace – USD 40.00 (was USD 50.00)">
+            <div class="product-card__bg"></div>
+            <div class="product-card__img-placeholder"></div>
+            <div class="product-card__price">
+              USD 40.00
+              <span class="product-card__price-original">USD 50.00</span>
+            </div>
+          </a>
+        </li>
+
+        <li>
+          <a href="#" class="product-card product-card--6" aria-label="Personalized Arabic Name Calligraphy Print – USD 7.47 (was USD 9.96)">
+            <div class="product-card__bg"></div>
+            <div class="product-card__img-placeholder"></div>
+            <div class="product-card__price">
+              USD 7.47
+              <span class="product-card__price-original">USD 9.96</span>
+            </div>
+          </a>
+        </li>
+
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer" role="contentinfo">
+
+  <!-- Newsletter -->
+  <div class="newsletter">
+    <p class="newsletter__text">Yes! Send me exclusive offers, unique gift ideas, and personalized tips for shopping and selling on Etsy.</p>
+    <form class="newsletter__form" action="#" method="post" aria-label="Email subscription">
+      <label for="newsletter-email" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Enter your email</label>
+      <input class="newsletter__input" id="newsletter-email" type="email" placeholder="Enter your email" autocomplete="email">
+      <button class="newsletter__btn" type="submit">Subscribe</button>
+    </form>
+  </div>
+
+  <!-- Renewable energy banner -->
+  <div class="renewable-banner">
+    <img src="https://www.figma.com/api/mcp/asset/91a555f7-14bc-4a8e-ad01-9686c5866024" alt="Green leaf icon">
+    <span class="renewable-banner__text">Etsy is powered by 100% renewable electricity.</span>
+  </div>
+
+  <!-- Footer columns + app -->
+  <div class="footer-content">
+
+    <!-- App section -->
+    <aside class="footer-app" aria-label="Download Etsy app">
+      <a href="#" class="footer-app__icon" aria-label="Etsy app">
+        <img src="https://www.figma.com/api/mcp/asset/d95cd12e-a455-4f83-b024-6bfcc6344f5f" alt="Etsy app icon">
+      </a>
+      <a href="#" class="footer-app__btn">Download the Etsy App</a>
+    </aside>
+
+    <!-- Nav columns -->
+    <nav class="footer-nav" aria-label="Footer navigation">
+
+      <!-- Shop -->
+      <div class="footer-col">
+        <h3 class="footer-col__heading">Shop</h3>
+        <ul class="footer-col__list">
+          <li class="footer-col__item"><a href="#">Gift cards</a></li>
+          <li class="footer-col__item"><a href="#">Etsy Registry</a></li>
+          <li class="footer-col__item"><a href="#">Sitemap</a></li>
+          <li class="footer-col__item"><a href="#">Etsy blog</a></li>
+          <li class="footer-col__item"><a href="#">Etsy United Kingdom</a></li>
+          <li class="footer-col__item"><a href="#">Etsy Germany</a></li>
+          <li class="footer-col__item"><a href="#">Etsy Canada</a></li>
+        </ul>
+      </div>
+
+      <!-- Sell -->
+      <div class="footer-col">
+        <h3 class="footer-col__heading">Sell</h3>
+        <ul class="footer-col__list">
+          <li class="footer-col__item"><a href="#">Sell on Etsy</a></li>
+          <li class="footer-col__item"><a href="#">Teams</a></li>
+          <li class="footer-col__item"><a href="#">Forums</a></li>
+          <li class="footer-col__item"><a href="#">Affiliates &amp; Creators</a></li>
+        </ul>
+      </div>
+
+      <!-- About -->
+      <div class="footer-col">
+        <h3 class="footer-col__heading">About</h3>
+        <ul class="footer-col__list">
+          <li class="footer-col__item"><a href="#">Etsy, Inc.</a></li>
+          <li class="footer-col__item"><a href="#">Policies</a></li>
+          <li class="footer-col__item"><a href="#">Investors</a></li>
+          <li class="footer-col__item"><a href="#">Careers</a></li>
+          <li class="footer-col__item"><a href="#">Press</a></li>
+          <li class="footer-col__item"><a href="#">Impact</a></li>
+          <li class="footer-col__item"><a href="#">Legal imprint</a></li>
+        </ul>
+      </div>
+
+      <!-- Help -->
+      <div class="footer-col">
+        <h3 class="footer-col__heading">Help</h3>
+        <ul class="footer-col__list">
+          <li class="footer-col__item"><a href="#">Help Center</a></li>
+          <li class="footer-col__item"><a href="#">Privacy settings</a></li>
+        </ul>
+        <!-- Social icons -->
+        <div class="footer-social" aria-label="Social media links">
+          <a href="#" aria-label="Instagram">
+            <img src="https://www.figma.com/api/mcp/asset/9c26f0db-af8d-41f9-b536-3dfe8e213829" alt="Instagram">
+          </a>
+          <a href="#" aria-label="Facebook">
+            <img src="https://www.figma.com/api/mcp/asset/21078844-54b3-4000-9217-1587f5e02096" alt="Facebook">
+          </a>
+          <a href="#" aria-label="Pinterest">
+            <img src="https://www.figma.com/api/mcp/asset/b7173a8c-2b01-42ce-b191-6f303132994f" alt="Pinterest">
+          </a>
+          <a href="#" aria-label="YouTube">
+            <img src="https://www.figma.com/api/mcp/asset/2c9d1e9f-10fe-4742-bd94-8e5379f7c1fa" alt="YouTube">
+          </a>
+        </div>
+      </div>
+
+    </nav>
+  </div>
+
+  <!-- Footer bottom bar -->
+  <div class="footer-bottom">
+    <div class="footer-bottom__inner">
+
+      <div class="footer-bottom__region">
+        <img src="https://www.figma.com/api/mcp/asset/e50c5a21-a2dd-4539-aef0-1d5c7fc2032f" alt="Globe icon">
+        Bangladesh &nbsp;|&nbsp; English (US) &nbsp;|&nbsp; $ (USD)
+      </div>
+
+      <span class="footer-bottom__copyright">© 2026 Etsy, Inc.</span>
+
+      <nav class="footer-bottom__links" aria-label="Legal links">
+        <a href="#" class="footer-bottom__link">Terms of Use</a>
+        <a href="#" class="footer-bottom__link">Privacy</a>
+        <a href="#" class="footer-bottom__link">Interest-based ads</a>
+        <a href="#" class="footer-bottom__link">Local Shops</a>
+        <a href="#" class="footer-bottom__link">Regions</a>
+      </nav>
+
+    </div>
+  </div>
+
+</footer>
+
+<script>
+  // ===== HAMBURGER MENU TOGGLE =====
+  (function () {
+    var btn = document.getElementById('hamburger-btn');
+    var nav = document.getElementById('mobile-nav');
+
+    if (!btn || !nav) return;
+
+    btn.addEventListener('click', function () {
+      var isOpen = nav.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    // Close on outside click
+    document.addEventListener('click', function (e) {
+      if (!btn.contains(e.target) && !nav.contains(e.target)) {
+        nav.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && nav.classList.contains('is-open')) {
+        nav.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.focus();
+      }
+    });
+  })();
+</script>
+
+</body>
+</html>
