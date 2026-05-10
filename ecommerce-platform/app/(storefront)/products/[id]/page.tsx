@@ -5,8 +5,12 @@ import { storage } from '@/lib/storage';
 import { useCart } from '@/hooks/useCart';
 import { formatCurrency, calculateDiscountPercent } from '@/lib/utils';
 import type { Product } from '@/lib/types';
-import StockTicker from '@/components/storefront/StockTicker';
 import Notifications from '@/components/storefront/Notifications';
+import { AccordionSections, ReviewsSection } from '@/components/storefront/ProductDetailSections';
+import {
+  ChevronLeft, Heart, Star, ChevronDown, Clock, Truck,
+  ArrowRight, MessageSquare, HelpCircle, Flag, Play
+} from 'lucide-react';
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -14,16 +18,21 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [related, setRelated] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
-  const [primaryColor, setPrimaryColor] = useState('#3b82f6');
+  const [activeImg, setActiveImg] = useState(0);
+  const [openSections, setOpenSections] = useState<string[]>(['details']);
+  const [wishlisted, setWishlisted] = useState(false);
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
+  const [recentBuyers, setRecentBuyers] = useState(0);
+
+  const toggleSection = (s: string) =>
+    setOpenSections(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
 
   useEffect(() => {
-    const _run = async () => {
-        const cid = await storage.getCartClientId();
+    setRecentBuyers(Math.floor(Math.random() * 12) + 2);
+    const run = async () => {
+      const cid = await storage.getCartClientId();
       if (!cid) return;
-      const client = await storage.getClient(cid);
-      if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
       const p = await storage.getProduct(cid, id);
       if (p) {
         setProduct(p);
@@ -32,108 +41,214 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         p.variants.forEach(v => { if (v.options.length > 0) defaults[v.type] = v.options[0]; });
         setSelectedVariants(defaults);
         const allProds = await storage.getProducts(cid);
-        setRelated(allProds.filter(x => x.status === 'active' && x.category === p.category && x.id !== p.id).slice(0, 4));
+        setRelated(allProds.filter(x => x.status === 'active' && x.category === p.category && x.id !== p.id).slice(0, 6));
       }
     };
-    _run();
+    run();
   }, [id]);
 
-  if (!product) return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-gray-400">Product not found</div>;
+  if (!product) return (
+    <div className="min-h-screen bg-sf-bg-primary flex items-center justify-center font-sf-sans text-sf-primary-light text-lg">Loading product…</div>
+  );
 
   const discount = product.salePrice ? calculateDiscountPercent(product.basePrice, product.salePrice) : 0;
   const price = product.salePrice || product.basePrice;
+  const images = product.images.length > 0 ? product.images : [];
+  const hasImages = images.length > 0;
 
   const handleAdd = async () => {
     addItem({ productId: product.id, productName: product.name, image: product.images[0], price, quantity, variant: selectedVariants });
     const cid = await storage.getCartClientId();
     if (cid) await storage.updateProduct(cid, product.id, { addToCartCount: product.addToCartCount + 1 });
-    setAdded(true); setTimeout(() => setAdded(false), 2000);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
   };
 
+  const navImg = (dir: number) => { if (hasImages) setActiveImg(p => (p + dir + images.length) % images.length); };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <StockTicker inventory={product.inventory} />
+    <div className="min-h-screen bg-sf-bg-primary font-sf-sans text-sf-primary antialiased">
       <Notifications productName={product.name} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <header className="py-4 md:py-6">
+          <Link href="/products" className="flex items-center gap-1 text-sf-primary-light hover:text-sf-primary font-bold text-[13.1px] tracking-tight transition-colors">
+            <ChevronLeft className="w-4 h-4" />Back to search results
+          </Link>
+        </header>
 
-      {/* Breadcrumb */}
-      <nav className="text-sm text-gray-400 mb-6"><Link href="/" className="hover:text-gray-600">Home</Link> / <Link href="/products" className="hover:text-gray-600">Products</Link> / <span className="text-gray-700">{product.name}</span></nav>
+        {/* Main Product Grid */}
+        <main className="grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-8 md:gap-12 mt-4 md:mt-8 pb-20">
+          {/* LEFT: Gallery + Reviews */}
+          <div className="space-y-12">
+            {/* Gallery */}
+            <div className="flex flex-col-reverse lg:flex-row gap-4 lg:gap-6">
+              {/* Thumbnails */}
+              {hasImages && images.length > 1 && (
+                <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide">
+                  {images.map((img, idx) => (
+                    <button key={idx} onClick={() => setActiveImg(idx)}
+                      className={`relative w-15 h-15 rounded-sm overflow-hidden flex-shrink-0 cursor-pointer border-2 transition-all ${activeImg === idx ? 'border-sf-primary opacity-100' : 'border-transparent opacity-60 hover:opacity-80'}`}>
+                      <img src={img} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
 
-      <div className="grid lg:grid-cols-2 gap-12">
-        {/* Image */}
-        <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center relative">
-          <span className="text-9xl">🛍️</span>
-          {discount > 0 && <span className="absolute top-4 left-4 px-3 py-1.5 bg-red-500 text-white text-sm font-bold rounded-full">SAVE {discount}%</span>}
-        </div>
-
-        {/* Details */}
-        <div className="space-y-6">
-          <div>
-            <p className="text-sm text-gray-400 uppercase tracking-wider">{product.category}</p>
-            <h1 className="text-3xl font-bold text-gray-900 mt-1">{product.name}</h1>
-          </div>
-
-          <div className="flex items-baseline gap-3">
-            <span className="text-4xl font-bold" style={{ color: primaryColor }}>{formatCurrency(price)}</span>
-            {product.salePrice && <span className="text-xl text-gray-400 line-through">{formatCurrency(product.basePrice)}</span>}
-            {discount > 0 && <span className="px-2 py-1 bg-red-100 text-red-700 text-sm font-bold rounded">{discount}% OFF</span>}
-          </div>
-
-          <p className="text-gray-600 leading-relaxed">{product.description}</p>
-
-          {/* Variants */}
-          {product.variants.map(v => (
-            <div key={v.id}>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">{v.type}</label>
-              <div className="flex flex-wrap gap-2">
-                {v.options.map(o => (
-                  <button key={o} onClick={() => setSelectedVariants({ ...selectedVariants, [v.type]: o })} className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${selectedVariants[v.type] === o ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>{o}</button>
-                ))}
+              {/* Main Image */}
+              <div className="relative flex-1 aspect-square bg-black/5 rounded-sm overflow-hidden group">
+                {product.purchaseCount > 3 && (
+                  <div className="absolute top-4 left-4 z-10 bg-sf-accent-yellow px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
+                    <Star className="w-3.5 h-3.5 text-sf-primary fill-sf-primary" />
+                    <span className="text-[13px] font-bold text-sf-primary">Bestseller</span>
+                  </div>
+                )}
+                <button onClick={() => setWishlisted(!wishlisted)} className="absolute top-4 right-4 z-10 w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                  <Heart className={`w-6 h-6 transition-colors ${wishlisted ? 'fill-sf-accent-red text-sf-accent-red' : 'text-sf-primary hover:fill-sf-accent-red hover:text-sf-accent-red'}`} />
+                </button>
+                <div className="w-full h-full flex items-center justify-center">
+                  {hasImages ? <img src={images[activeImg]} alt={product.name} className="w-full h-full object-cover" /> : <span className="text-9xl">🛍️</span>}
+                </div>
+                {hasImages && images.length > 1 && (
+                  <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => navImg(-1)} className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-md hover:bg-gray-50 active:scale-95 transition-all"><ChevronLeft className="w-6 h-6" /></button>
+                    <button onClick={() => navImg(1)} className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-md hover:bg-gray-50 active:scale-95 transition-all"><ArrowRight className="w-6 h-6" /></button>
+                  </div>
+                )}
               </div>
             </div>
-          ))}
 
-          {/* Quantity */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Quantity</label>
-            <div className="inline-flex items-center border border-gray-300 rounded-lg">
-              <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-4 py-2 text-gray-600 hover:bg-gray-50">−</button>
-              <span className="px-6 py-2 font-medium border-x border-gray-300">{quantity}</span>
-              <button onClick={() => setQuantity(Math.min(product.inventory, quantity + 1))} className="px-4 py-2 text-gray-600 hover:bg-gray-50">+</button>
+            {/* Desktop Reviews */}
+            <ReviewsSection />
+          </div>
+
+          {/* RIGHT: Sidebar */}
+          <aside className="space-y-8">
+            <div className="space-y-5">
+              {/* Urgency */}
+              <p className="text-[13px] font-bold text-sf-accent-red flex items-center gap-2 bg-sf-accent-red/5 p-3 rounded-sm">
+                <Clock className="w-4 h-4" />In demand. {recentBuyers} people bought this recently.
+              </p>
+
+              {/* Price */}
+              <div className="flex items-baseline gap-4">
+                <span className="text-[34px] font-bold tracking-tight">{formatCurrency(price)}</span>
+                {product.salePrice && <span className="text-xl text-sf-primary-light line-through decoration-sf-primary opacity-60">{formatCurrency(product.basePrice)}</span>}
+              </div>
+              {discount > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="bg-sf-accent-green/10 text-sf-accent-green px-2.5 py-1 rounded-sm font-bold">{discount}% off</span>
+                  <span className="text-sf-accent-green font-bold">• Limited time sale</span>
+                </div>
+              )}
+              <p className="text-[13.8px] text-sf-primary-light border-b border-sf-border-light pb-4">VAT included (where applicable)</p>
             </div>
-            {product.inventory > 0 && product.inventory <= 10 && <p className="text-sm text-orange-600 mt-2">⚡ Only {product.inventory} left in stock!</p>}
-          </div>
 
-          {/* Add to cart */}
-          <button onClick={handleAdd} disabled={product.inventory === 0} className="w-full py-4 rounded-xl text-lg font-bold text-white transition-all hover:opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed" style={{ backgroundColor: product.inventory > 0 ? primaryColor : undefined }}>
-            {added ? '✓ Added to Cart!' : product.inventory === 0 ? 'Out of Stock' : `Add to Cart — ${formatCurrency(price * quantity)}`}
-          </button>
+            {/* Title + Stars */}
+            <div className="space-y-3">
+              <h1 className="text-xl md:text-[22px] leading-snug font-medium">{product.name}</h1>
+              <p className="font-bold text-[15px] hover:underline cursor-pointer flex items-center gap-2">
+                {product.category}<HelpCircle className="w-4 h-4 opacity-30" />
+              </p>
+              <div className="flex gap-0.5">{[...Array(5)].map((_, i) => <Star key={i} className="w-3.5 h-3.5 text-sf-primary fill-sf-primary" />)}</div>
+            </div>
 
-          {/* Info */}
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-            <div className="flex items-center gap-2 text-sm text-gray-500"><span>🚚</span> Free shipping over ৳1,000</div>
-            <div className="flex items-center gap-2 text-sm text-gray-500"><span>💰</span> Cash on Delivery</div>
-            <div className="flex items-center gap-2 text-sm text-gray-500"><span>🔄</span> 7-day returns</div>
-            <div className="flex items-center gap-2 text-sm text-gray-500"><span>✅</span> Quality guaranteed</div>
-          </div>
+            {/* Returns */}
+            <div className="flex items-center gap-3 text-[14px] py-1">
+              <Truck className="w-5 h-5 text-sf-primary-light" /><span>Returns &amp; exchanges accepted</span>
+            </div>
 
-          <div className="text-xs text-gray-400">SKU: {product.sku}</div>
-        </div>
+            {/* Variants + Quantity + Add to Cart */}
+            <div className="space-y-5 pt-2">
+              {product.variants.map(v => (
+                <div key={v.id} className="space-y-2.5">
+                  <label className="text-[14px] font-bold">{v.type}</label>
+                  <div className="relative">
+                    <select value={selectedVariants[v.type] || ''} onChange={e => setSelectedVariants({ ...selectedVariants, [v.type]: e.target.value })}
+                      className="w-full h-12 px-4 border border-sf-border rounded-sm appearance-none bg-transparent hover:border-sf-primary transition-colors focus:outline-none cursor-pointer text-[15.5px]">
+                      {v.options.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none opacity-50" />
+                  </div>
+                </div>
+              ))}
+
+              {/* Personalization */}
+              <button className="flex items-center gap-2 text-[13.5px] font-bold py-2.5 hover:bg-black/5 px-3 -mx-3 rounded transition-colors group w-full text-left">
+                <MessageSquare className="w-4 h-4 opacity-60" />
+                <span className="flex-1">Add personalization <span className="font-normal text-sf-primary-light">(optional)</span></span>
+                <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+
+              {/* Quantity */}
+              <div className="space-y-2.5">
+                <label className="text-[14px] font-bold">Quantity</label>
+                <div className="relative">
+                  <select value={quantity} onChange={e => setQuantity(Number(e.target.value))}
+                    className="w-full h-12 px-4 border border-sf-border rounded-sm appearance-none bg-transparent hover:border-sf-primary transition-colors focus:outline-none cursor-pointer text-[15.5px]">
+                    {Array.from({ length: Math.min(product.inventory || 10, 10) }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none opacity-50" />
+                </div>
+              </div>
+
+              {/* Add to Cart Button */}
+              <button onClick={handleAdd} disabled={product.inventory === 0}
+                className={`w-full h-14 rounded-full font-bold text-[16px] transition-all shadow-md mt-4 ${
+                  added ? 'bg-sf-accent-green text-white scale-[0.98]'
+                  : product.inventory === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-sf-primary text-white hover:scale-[1.01] active:scale-[0.98]'
+                }`}>
+                {added ? '✓ Added to Cart!' : product.inventory === 0 ? 'Out of Stock' : `Add to cart — ${formatCurrency(price * quantity)}`}
+              </button>
+            </div>
+
+            {/* Collapsible Accordion Sections */}
+            <AccordionSections openSections={openSections} toggleSection={toggleSection} description={product.description} category={product.category} sku={product.sku} />
+
+            {/* Report */}
+            <button className="flex items-center gap-2 text-[13.5px] font-bold underline underline-offset-4 py-2 hover:text-sf-accent-red transition-colors">
+              <Flag className="w-4 h-4" />Report this item
+            </button>
+          </aside>
+        </main>
+
+        {/* Similar Products */}
+        {related.length > 0 && (
+          <section className="pt-20 pb-32 border-t border-sf-border-light mt-12">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-4">
+                <h2 className="text-3xl md:text-4xl font-sf-serif tracking-tight text-sf-primary">You may also like</h2>
+                <div className="flex items-center gap-2 bg-black/5 px-2 py-1 rounded">
+                  <span className="text-[12px] font-bold text-sf-primary-light uppercase tracking-wider">Including ads</span>
+                  <HelpCircle className="w-3.5 h-3.5 opacity-30" />
+                </div>
+              </div>
+              <Link href="/products" className="px-8 py-3.5 border-2 border-sf-primary rounded-full text-sm font-bold hover:bg-sf-primary hover:text-white transition-all transform active:scale-95">See more</Link>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 md:gap-4">
+              {related.map(p => {
+                const rPrice = p.salePrice || p.basePrice;
+                return (
+                  <Link key={p.id} href={`/products/${p.id}`} className="group relative block">
+                    <div className="aspect-square rounded-xl mb-3 overflow-hidden shadow-sm transition-all duration-500 group-hover:shadow-xl group-hover:-translate-y-1 bg-sf-bg-secondary">
+                      {p.images[0] ? <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="text-5xl">🛍️</span></div>}
+                      <button className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xl hover:scale-110 active:scale-90" onClick={e => e.preventDefault()}>
+                        <Heart className="w-5 h-5 text-sf-primary" />
+                      </button>
+                    </div>
+                    <h3 className="text-[14px] line-clamp-2 leading-relaxed mb-1.5 text-sf-primary/90 font-medium group-hover:text-sf-primary transition-colors">{p.name}</h3>
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-bold text-sf-accent-green-dark text-[16px]">{formatCurrency(rPrice)}</span>
+                      {p.salePrice && <span className="text-[13px] text-sf-primary-light line-through decoration-sf-primary opacity-40">{formatCurrency(p.basePrice)}</span>}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
-
-      {/* Related */}
-      {related.length > 0 && (
-        <section className="mt-16">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Related Products</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {related.map(p => (
-              <Link key={p.id} href={`/products/${p.id}`} className="group bg-white rounded-xl border hover:shadow-lg transition-all">
-                <div className="aspect-square bg-gray-50 rounded-t-xl flex items-center justify-center"><span className="text-4xl">🛍️</span></div>
-                <div className="p-3"><h3 className="text-sm font-medium group-hover:text-blue-600">{p.name}</h3><p className="text-sm font-bold mt-1">{formatCurrency(p.salePrice || p.basePrice)}</p></div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }
