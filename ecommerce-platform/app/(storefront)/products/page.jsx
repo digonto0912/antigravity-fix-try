@@ -1,13 +1,23 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { storage } from '@/lib/storage';
 import { useCart } from '@/hooks/useCart';
 import { formatCurrency, calculateDiscountPercent } from '@/lib/utils';
 
 export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-8 text-center text-gray-400">Loading...</div>}>
+      <ProductsContent />
+    </Suspense>
+  );
+}
+
+function ProductsContent() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [sort, setSort] = useState('newest');
@@ -21,7 +31,10 @@ export default function ProductsPage() {
     const allProds = await storage.getProducts(cid);
     setProducts(allProds.filter(p => p.status === 'active'));
     setCategories(await storage.getCategories(cid));
-  }; _run(); }, []);
+    // Auto-select category from URL param
+    const catParam = searchParams.get('cat');
+    if (catParam) setCategory(catParam);
+  }; _run(); }, [searchParams]);
 
   let filtered = products.filter(p => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -65,8 +78,12 @@ export default function ProductsPage() {
           const discount = p.salePrice ? calculateDiscountPercent(p.basePrice, p.salePrice) : 0;
           return (
             <div key={p.id} className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <Link href={`/products/${p.id}`} className="block relative aspect-square bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
-                <span className="text-6xl">🛍️</span>
+              <Link href={`/products/${p.id}`} className="block relative aspect-square bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center overflow-hidden">
+                {p.images?.[0] && p.images[0] !== '/placeholder-product.svg' ? (
+                  <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-6xl">🛍️</span>
+                )}
                 {discount > 0 && <span className="absolute top-3 left-3 px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">{discount}% OFF</span>}
                 {p.inventory === 0 && <span className="absolute top-3 right-3 px-2 py-1 bg-gray-800 text-white text-xs rounded-full">Sold Out</span>}
                 {p.inventory > 0 && p.inventory <= 5 && <span className="absolute bottom-3 left-3 px-2 py-1 bg-orange-500 text-white text-xs rounded-full">Only {p.inventory} left!</span>}

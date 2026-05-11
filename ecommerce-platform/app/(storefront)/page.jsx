@@ -6,32 +6,10 @@ import { useCart } from '@/hooks/useCart';
 import { formatCurrency } from '@/lib/utils';
 import './storefront-home.css';
 
-const INTEREST_CARDS = [
-  { id: 'goblincore', name: 'Goblincore', sub: 'Forest-themed finds', modifier: 'interest-card--goblincore' },
-  { id: 'sayyes', name: 'Say Yes!', sub: 'In just their style', modifier: 'interest-card--sayyes', selected: true },
-  { id: 'cherry', name: 'Cherry Picked', sub: 'Adorable fruit finds', modifier: 'interest-card--cherry' },
-  { id: 'inky', name: 'Inky Blue Hues', sub: 'All twilight tones', modifier: 'interest-card--inky' },
-];
-
-const SPRING_CARDS = [
-  { label: 'Y2K Revival', bg: '#b8bdb8' },
-  { label: 'Outdoor Entertaining', bg: '#c4c8c0' },
-  { label: 'Special Wedding Gifts', bg: '#cbc8c2' },
-  { label: 'May Birthstone Finds', bg: '#bfc4be' },
-  { label: 'Learn a New Skill', bg: '#c2c5bf' },
-];
-
-const EID_CARDS = [
-  { label: "Kids' Tasbih", bg: '#7a8a7a' },
-  { label: 'Handmade Pottery', bg: '#8a9a8a' },
-  { label: 'Arabic Name Necklaces', bg: '#9aaa9a' },
-];
-
-const PRODUCT_CARD_COLORS = ['#521c11', '#6d8797', '#1b7f6d', '#aaadad', '#d6d0c9', '#e4d4c3'];
-
 export default function StorefrontHome() {
   const [products, setProducts] = useState([]);
-
+  const [categories, setCategories] = useState([]);
+  const [hero, setHero] = useState(null);
   const { addItem } = useCart();
   const [added, setAdded] = useState(null);
 
@@ -39,8 +17,30 @@ export default function StorefrontHome() {
     const _run = async () => {
       const cid = await storage.getCartClientId();
       if (!cid) return;
-      const allProds = await storage.getProducts(cid);
-      setProducts(allProds.filter(p => p.status === 'active').slice(0, 12));
+
+      // Fetch all data in parallel
+      const [allProds, cats, heroData] = await Promise.all([
+        storage.getProducts(cid),
+        storage.getCategories(cid),
+        storage.getHomepageHero(cid),
+      ]);
+
+      // Sort: views desc (most clicked first), then in-stock first
+      const active = allProds
+        .filter(p => p.status === 'active')
+        .sort((a, b) => {
+          // Primary: views descending
+          const viewDiff = (b.views || 0) - (a.views || 0);
+          if (viewDiff !== 0) return viewDiff;
+          // Secondary: in-stock first
+          const aStock = (a.inventory || 0) > 0 ? 1 : 0;
+          const bStock = (b.inventory || 0) > 0 ? 1 : 0;
+          return bStock - aStock;
+        });
+
+      setProducts(active);
+      setCategories(cats.sort((a, b) => a.displayOrder - b.displayOrder));
+      if (heroData) setHero(heroData);
     };
     _run();
   }, []);
@@ -51,7 +51,21 @@ export default function StorefrontHome() {
     setTimeout(() => setAdded(null), 1500);
   };
 
-  const displayProducts = products.slice(0, 6);
+  // Split products: best 5, next 3, remaining
+  const best5 = products.slice(0, 5);
+  const next3 = products.slice(5, 8);
+  const remaining = products.slice(8);
+
+  // Hero defaults
+  const h = hero || {};
+  const heroLeftHeading = h.leftHeading || 'Quick, creative gifts for Mom';
+  const heroLeftCta = h.leftCta || 'Shop for downloads';
+  const heroLeftCtaLink = h.leftCtaLink || '/products';
+  const heroLeftImage = h.leftImage || '';
+  const heroRightTitle = h.rightTitle || "Rising sellers you'll want to get to know";
+  const heroRightLinkText = h.rightLinkText || 'Shop now';
+  const heroRightLinkHref = h.rightLinkHref || '/products';
+  const heroRightImage = h.rightImage || '';
 
   return (
     <div className="etsy-home">
@@ -61,26 +75,26 @@ export default function StorefrontHome() {
         <div className="hero__inner">
           <div className="hero__grid">
 
-            {/* Left: Quick creative gifts for Mom */}
+            {/* Left panel */}
             <article className="hero__left">
               <div className="hero__left-content">
-                <h1 className="hero__heading">Quick, creative gifts for Mom</h1>
-                <Link href="/products" className="hero__cta">Shop for downloads</Link>
+                <h1 className="hero__heading">{heroLeftHeading}</h1>
+                <Link href={heroLeftCtaLink} className="hero__cta">{heroLeftCta}</Link>
               </div>
               <div className="hero__left-img">
-                <img
-                  src="https://www.figma.com/api/mcp/asset/fcd17ee8-328f-4f09-bcc2-e9a38d7e6b4c"
-                  alt="Printable Mom questionnaire gift idea"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+                {heroLeftImage ? (
+                  <img src={heroLeftImage} alt={heroLeftHeading} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #e8d5a8 0%, #d4b88a 50%, #c9a472 100%)' }} />
+                )}
               </div>
             </article>
 
-            {/* Right: Rising sellers */}
-            <article className="hero__right">
+            {/* Right panel */}
+            <article className="hero__right" style={heroRightImage ? { backgroundImage: `url(${heroRightImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
               <div className="hero__right-content">
-                <h2 className="hero__right-title">Rising sellers you&apos;ll want to get to know</h2>
-                <Link href="/products" className="hero__right-link">Shop now</Link>
+                <h2 className="hero__right-title">{heroRightTitle}</h2>
+                <Link href={heroRightLinkHref} className="hero__right-link">{heroRightLinkText}</Link>
               </div>
             </article>
 
@@ -88,127 +102,126 @@ export default function StorefrontHome() {
         </div>
       </section>
 
-      {/* ===== FEATURED INTERESTS ===== */}
-      <section className="featured-interests" aria-labelledby="featured-heading">
-        <div className="featured-interests__inner">
-          <h2 className="section-heading" id="featured-heading">Jump into featured interests</h2>
-          <ul className="interests-grid">
-            {INTEREST_CARDS.map(card => (
-              <li key={card.id}>
-                <Link
-                  href="/products"
-                  className={`interest-card ${card.modifier}${card.selected ? ' interest-card--selected' : ''}`}
-                  aria-label={`${card.name} - ${card.sub}`}
-                >
-                  <div className="interest-card__image" />
-                  <div className="interest-card__footer">
-                    <div className="interest-card__name">{card.name}</div>
-                    <div className="interest-card__sub">{card.sub}</div>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* ===== SPRING 2026 SECTION ===== */}
-      <section className="spring-section" aria-labelledby="spring-heading">
-        <div className="spring-section__inner">
-          <h2 className="section-heading" id="spring-heading">Discover our best of spring 2026</h2>
-          <ul className="spring-grid">
-            {SPRING_CARDS.map(card => (
-              <li key={card.label}>
-                <Link href="/products" className="spring-card" aria-label={card.label}>
-                  <div className="spring-card__image" style={{ background: card.bg }} />
-                  <div className="spring-card__label">{card.label}</div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* ===== EID GIFTS SECTION ===== */}
-      <section className="eid-section" aria-labelledby="eid-heading">
-        <div className="eid-section__inner">
-          <div className="eid-section__left">
-            <h2 className="eid-section__title" id="eid-heading">Etsy-special gifts for Eid</h2>
-            <Link href="/products" className="eid-section__btn">Get inspired</Link>
+      {/* ===== FEATURED CATEGORIES ===== */}
+      {categories.length > 0 && (
+        <section className="featured-interests" aria-labelledby="featured-heading">
+          <div className="featured-interests__inner">
+            <h2 className="section-heading" id="featured-heading">Jump into featured interests</h2>
+            <div className="interests-scroll">
+              <ul className="interests-grid">
+                {categories.map((cat, i) => (
+                  <li key={cat.id}>
+                    <Link
+                      href={`/products?cat=${encodeURIComponent(cat.name)}`}
+                      className={`interest-card${i === 0 ? ' interest-card--selected' : ''}`}
+                      aria-label={`${cat.name} - abc`}
+                    >
+                      <div
+                        className="interest-card__image"
+                        style={cat.image ? { backgroundImage: `url(${cat.image})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+                      />
+                      <div className="interest-card__footer">
+                        <div className="interest-card__name">{cat.name}</div>
+                        <div className="interest-card__sub">abc</div>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <div className="eid-section__right">
-            <ul className="eid-cards-grid">
-              {EID_CARDS.map(card => (
-                <li key={card.label}>
-                  <Link href="/products" className="eid-card" aria-label={card.label}>
-                    <div className="eid-card__bg" style={{ background: card.bg }} />
-                    <div className="eid-card__label">{card.label}</div>
+        </section>
+      )}
+
+      {/* ===== BEST 5 PRODUCTS ===== */}
+      {best5.length > 0 && (
+        <section className="spring-section" aria-labelledby="spring-heading">
+          <div className="spring-section__inner">
+            <h2 className="section-heading" id="spring-heading">Discover our best of spring 2026</h2>
+            <ul className="spring-grid">
+              {best5.map(p => (
+                <li key={p.id}>
+                  <Link href={`/products/${p.id}`} className="spring-card" aria-label={p.name}>
+                    <div
+                      className="spring-card__image"
+                      style={p.images?.[0] && p.images[0] !== '/placeholder-product.svg'
+                        ? { backgroundImage: `url(${p.images[0]})`, backgroundSize: 'cover', backgroundPosition: 'center', background: undefined }
+                        : { background: '#c8cac5' }
+                      }
+                    />
+                    <div className="spring-card__label">{p.name}</div>
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* ===== PRODUCT CARDS ===== */}
-      <section className="products-section" aria-label="Featured products">
-        <div className="products-section__inner">
-          <ul className="products-grid">
-            {displayProducts.length > 0
-              ? displayProducts.map((p, i) => {
-                  const bgColor = PRODUCT_CARD_COLORS[i % PRODUCT_CARD_COLORS.length];
-                  return (
-                    <li key={p.id}>
-                      <Link
-                        href={`/products/${p.id}`}
-                        className={`product-card product-card--${i + 1}`}
-                        aria-label={`${p.name} – ${formatCurrency(p.salePrice || p.basePrice)}`}
-                      >
-                        <div className="product-card__bg" style={{ background: bgColor }} />
-                        <div className="product-card__img-placeholder" />
-                        <div className="product-card__price">
-                          {formatCurrency(p.salePrice || p.basePrice)}
-                          {p.salePrice && (
-                            <span className="product-card__price-original">
-                              {formatCurrency(p.basePrice)}
-                            </span>
-                          )}
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })
-              : /* Static placeholder cards when no products loaded */
-                [
-                  { price: 'USD 280.00' },
-                  { price: 'USD 20.31' },
-                  { price: 'USD 11.39' },
-                  { price: 'USD 50.70' },
-                  { price: 'USD 40.00', original: 'USD 50.00' },
-                  { price: 'USD 7.47', original: 'USD 9.96' },
-                ].map((item, i) => (
-                  <li key={i}>
-                    <Link
-                      href="/products"
-                      className={`product-card product-card--${i + 1}`}
-                      aria-label={item.price}
-                    >
-                      <div className="product-card__bg" />
-                      <div className="product-card__img-placeholder" />
-                      <div className="product-card__price">
-                        {item.price}
-                        {item.original && (
-                          <span className="product-card__price-original">{item.original}</span>
-                        )}
-                      </div>
+      {/* ===== NEXT 3 PRODUCTS ===== */}
+      {next3.length > 0 && (
+        <section className="eid-section" aria-labelledby="eid-heading">
+          <div className="eid-section__inner">
+            <div className="eid-section__left">
+              <h2 className="eid-section__title" id="eid-heading">Etsy-special gifts for Eid</h2>
+              <Link href="/products" className="eid-section__btn">Get inspired</Link>
+            </div>
+            <div className="eid-section__right">
+              <ul className="eid-cards-grid">
+                {next3.map(p => (
+                  <li key={p.id}>
+                    <Link href={`/products/${p.id}`} className="eid-card" aria-label={p.name}>
+                      <div
+                        className="eid-card__bg"
+                        style={p.images?.[0] && p.images[0] !== '/placeholder-product.svg'
+                          ? { backgroundImage: `url(${p.images[0]})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                          : { background: '#888' }
+                        }
+                      />
+                      <div className="eid-card__label">{p.name}</div>
                     </Link>
                   </li>
-                ))
-            }
-          </ul>
-        </div>
-      </section>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ===== REMAINING PRODUCTS ===== */}
+      {remaining.length > 0 && (
+        <section className="products-section" aria-label="Featured products">
+          <div className="products-section__inner">
+            <ul className="products-grid">
+              {remaining.map((p, i) => (
+                <li key={p.id}>
+                  <Link
+                    href={`/products/${p.id}`}
+                    className={`product-card product-card--${(i % 6) + 1}`}
+                    aria-label={`${p.name} – ${formatCurrency(p.salePrice || p.basePrice)}`}
+                  >
+                    <div
+                      className="product-card__bg"
+                      style={p.images?.[0] && p.images[0] !== '/placeholder-product.svg'
+                        ? { backgroundImage: `url(${p.images[0]})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                        : {}
+                      }
+                    />
+                    <div className="product-card__price">
+                      {formatCurrency(p.salePrice || p.basePrice)}
+                      {p.salePrice && (
+                        <span className="product-card__price-original">
+                          {formatCurrency(p.basePrice)}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
 
     </div>
   );

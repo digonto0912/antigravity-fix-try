@@ -22,6 +22,8 @@ export default function NewProductPage() {
   const [variants, setVariants] = useState([]);
   const [newCat, setNewCat] = useState('');
   const [showNewCat, setShowNewCat] = useState(false);
+  const [newCatImage, setNewCatImage] = useState('');
+  const [uploadingCatImage, setUploadingCatImage] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState([]);
   const [successMsg, setSuccessMsg] = useState('');
@@ -77,18 +79,33 @@ export default function NewProductPage() {
     setVariants(prev => prev.filter((_, i) => i !== idx));
   }, []);
 
+  const handleCatImageUpload = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCatImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.url) setNewCatImage(data.url);
+    } catch (err) { console.error('Upload failed:', err); }
+    setUploadingCatImage(false);
+  }, []);
+
   const addNewCategory = useCallback(async () => {
     if (!client || !newCat.trim()) return;
     const cat = {
       id: generateId(), clientId: client.id, name: newCat.trim(),
-      displayOrder: categories.length + 1, createdAt: new Date().toISOString(),
+      image: newCatImage || '', displayOrder: categories.length + 1, createdAt: new Date().toISOString(),
     };
     await storage.addCategory(client.id, cat);
     setCategories(prev => [...prev, cat]);
     updateField('category', newCat.trim());
     setNewCat('');
+    setNewCatImage('');
     setShowNewCat(false);
-  }, [client, newCat, categories.length, updateField]);
+  }, [client, newCat, newCatImage, categories.length, updateField]);
 
   // Handle Cloudinary image upload
   const handleImageUpload = useCallback(async (e) => {
@@ -218,9 +235,18 @@ export default function NewProductPage() {
             <button onClick={() => setShowNewCat(!showNewCat)} className="px-3 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200">+ New</button>
           </div>
           {showNewCat && (
-            <div className="flex gap-2 mt-2">
-              <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="Category name" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-              <button onClick={addNewCategory} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm">Add</button>
+            <div className="space-y-2 mt-2">
+              <div className="flex gap-2">
+                <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="Category name" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                <button onClick={addNewCategory} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm">Add</button>
+              </div>
+              <div className="flex items-center gap-2">
+                {newCatImage && <img src={newCatImage} alt="" className="w-8 h-8 rounded object-cover" />}
+                <label className="text-xs text-blue-600 cursor-pointer hover:underline">
+                  <input type="file" accept="image/*" onChange={handleCatImageUpload} className="hidden" />
+                  {uploadingCatImage ? 'Uploading...' : '📷 Category image'}
+                </label>
+              </div>
             </div>
           )}
         </FormField>

@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { storage } from '@/lib/storage';
+import { getVisitorId } from '@/lib/fingerprint';
 
 import { useCart } from '@/hooks/useCart';
 import { useToast } from '@/hooks/useToast';
@@ -13,13 +15,7 @@ import CustomerAuthModal from '@/components/storefront/CustomerAuthModal';
 import Chatbot from '@/components/storefront/Chatbot';
 import './storefront-layout.css';
 
-const SECONDARY_NAV = [
-  { href: '/products', label: 'Home Favorites' },
-  { href: '/products', label: 'Fashion Finds' },
-  { href: '/products', label: 'Best Sellers' },
-  { href: '/products', label: 'Gift Ideas' },
-  { href: '/products', label: 'New Arrivals' },
-];
+
 
 export default function StorefrontLayout({ children }) {
   const pathname = usePathname();
@@ -31,11 +27,23 @@ export default function StorefrontLayout({ children }) {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [navCategories, setNavCategories] = useState([]);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneSaved, setPhoneSaved] = useState(false);
   const dropdownRef = useRef(null);
 
   useTracking();
   useSessionRecorder();
 
+  useEffect(() => {
+    const fetchCats = async () => {
+      const cid = await storage.getCartClientId();
+      if (!cid) return;
+      const cats = await storage.getCategories(cid);
+      setNavCategories(cats.sort((a, b) => a.displayOrder - b.displayOrder));
+    };
+    fetchCats();
+  }, []);
 
 
   useEffect(() => {
@@ -164,9 +172,9 @@ export default function StorefrontLayout({ children }) {
         <ul className="sf-mobile-nav__list">
           <li className="sf-mobile-nav__item"><Link href="/">Home</Link></li>
           <li className="sf-mobile-nav__item"><Link href="/products">All Products</Link></li>
-          {SECONDARY_NAV.map(item => (
-            <li key={item.label} className="sf-mobile-nav__item">
-              <Link href={item.href}>{item.label}</Link>
+          {navCategories.map(cat => (
+            <li key={cat.id} className="sf-mobile-nav__item">
+              <Link href={`/products?cat=${encodeURIComponent(cat.name)}`}>{cat.name}</Link>
             </li>
           ))}
           {customer ? (
@@ -192,9 +200,9 @@ export default function StorefrontLayout({ children }) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 12v10H4V12" /><path d="M2 7h20v5H2z" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></svg>
             All Products
           </Link>
-          {SECONDARY_NAV.map(item => (
-            <Link key={item.label} href={item.href} className="sf-secondary-nav__item">
-              {item.label}
+          {navCategories.map(cat => (
+            <Link key={cat.id} href={`/products?cat=${encodeURIComponent(cat.name)}`} className="sf-secondary-nav__item">
+              {cat.name}
             </Link>
           ))}
         </div>
@@ -209,14 +217,36 @@ export default function StorefrontLayout({ children }) {
         {/* Newsletter */}
         <div className="sf-newsletter">
           <p className="sf-newsletter__text">
-            Yes! Send me exclusive offers, unique gift ideas, and personalized tips for shopping and selling on Etsy.
+            Get exclusive offers & updates via SMS. Enter your phone number below.
           </p>
-          <form className="sf-newsletter__form" action="#" method="post" aria-label="Email subscription" onSubmit={e => e.preventDefault()}>
-            <label htmlFor="sf-newsletter-email" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
-              Enter your email
+          <form className="sf-newsletter__form" action="#" method="post" aria-label="Phone subscription" onSubmit={async (e) => {
+            e.preventDefault();
+            if (!phoneNumber.trim() || phoneSaved) return;
+            try {
+              const cid = await storage.getCartClientId();
+              if (!cid) return;
+              if (customer) {
+                // Logged in customer — update their customer record
+                const customers = await storage.getCustomers(cid);
+                const found = customers.find(c => c.email === customer.email);
+                if (found) await storage.updateCustomer(cid, found.id, { phone: phoneNumber.trim() });
+              } else {
+                // Anonymous visitor — update their lead record
+                const visitor = getVisitorId();
+                const leads = await storage.getLeads(cid);
+                const lead = leads.find(l => l.sessionId === visitor.fingerprintId);
+                if (lead) await storage.updateLead(cid, lead.id, { phone: phoneNumber.trim() });
+              }
+              setPhoneSaved(true);
+              setPhoneNumber('');
+              setTimeout(() => setPhoneSaved(false), 4000);
+            } catch (err) { console.error('Phone save error:', err); }
+          }}>
+            <label htmlFor="sf-newsletter-phone" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
+              Enter your phone number
             </label>
-            <input className="sf-newsletter__input" id="sf-newsletter-email" type="email" placeholder="Enter your email" autoComplete="email" />
-            <button className="sf-newsletter__btn" type="submit">Subscribe</button>
+            <input className="sf-newsletter__input" id="sf-newsletter-phone" type="tel" placeholder="01XXXXXXXXX" autoComplete="tel" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
+            <button className="sf-newsletter__btn" type="submit">{phoneSaved ? '✓ Saved!' : 'Subscribe'}</button>
           </form>
         </div>
 

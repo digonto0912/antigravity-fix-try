@@ -10,6 +10,7 @@ import ToastContainer from '@/components/shared/Toast';
 
 const nav = [
   { label: '📊 Dashboard', href: '/admin', exact: true },
+  { label: '🏠 Homepage', href: '/admin/homepage', exact: true },
   {
     label: '🛍️ Products', href: '/admin/products', children: [
       { label: 'All Products', href: '/admin/products' },

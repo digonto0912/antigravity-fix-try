@@ -10,12 +10,14 @@ export default function Chatbot() {
   const storeName = 'Demo Store';
   const messagesEnd = useRef(null);
 
-  useEffect(() => { const _run = async () => {
-    const cid = await storage.getCartClientId();
-    if (!cid) return;
-    const allResponses = await storage.getAutoResponses(cid);
-    setAutoResponses(allResponses.filter(r => r.isActive));
-  }; _run(); }, []);
+  useEffect(() => {
+    const _run = async () => {
+      const cid = await storage.getCartClientId();
+      if (!cid) return;
+      const allResponses = await storage.getAutoResponses(cid);
+      setAutoResponses(allResponses.filter(r => r.isActive));
+    }; _run();
+  }, []);
 
   useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -49,10 +51,10 @@ export default function Chatbot() {
   return (
     <>
       {/* Chat Button */}
-      <button onClick={() => { setOpen(!open); if (messages.length === 0) setMessages([{ from: 'bot', text: `Hi! 👋 Welcome to ${storeName}. How can I help you today?` }]); }}
+      {/* <button onClick={() => { setOpen(!open); if (messages.length === 0) setMessages([{ from: 'bot', text: `Hi! 👋 Welcome to ${storeName}. How can I help you today?` }]); }}
         className="fixed bottom-4 right-4 z-[100] w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all hover:scale-110 flex items-center justify-center">
         {open ? <span className="text-xl">✕</span> : <span className="text-2xl">💬</span>}
-      </button>
+      </button> */}
 
       {/* Chat Window */}
       {open && (

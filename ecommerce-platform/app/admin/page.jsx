@@ -68,7 +68,7 @@ export default function DashboardPage() {
           { label: 'Products', value: metrics.productCount, icon: '🛍️', color: 'bg-purple-50 text-purple-700' },
           { label: 'Customers', value: metrics.customerCount, icon: '👥', color: 'bg-indigo-50 text-indigo-700' },
           { label: 'Hot Leads', value: metrics.hotLeads, icon: '🔥', color: 'bg-red-50 text-red-700' },
-          { label: 'Unread Msgs', value: metrics.unreadMessages, icon: '💬', color: 'bg-yellow-50 text-yellow-700' },
+          // { label: 'Unread Msgs', value: metrics.unreadMessages, icon: '💬', color: 'bg-yellow-50 text-yellow-700' },
         ].map(m => (
           <div key={m.label} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 mb-2"><span className={`text-xs px-2 py-1 rounded-full ${m.color}`}>{m.icon}</span></div>
