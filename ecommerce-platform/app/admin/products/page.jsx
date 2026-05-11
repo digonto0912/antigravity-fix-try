@@ -16,7 +16,7 @@ export default function ProductsPage() {
   const [stockFilter, setStockFilter] = useState('all');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortDir, setSortDir] = useState('desc');
-  const [selected, setSelected] = useState>(new Set());
+  const [selected, setSelected] = useState(new Set());
   const [deleteId, setDeleteId] = useState(null);
 
   const load = async () => { if (client) setProducts(await storage.getProducts(client.id)); };

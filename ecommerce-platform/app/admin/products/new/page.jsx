@@ -17,7 +17,7 @@ export default function NewProductPage() {
   const router = useRouter();
   const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState>({});
+  const [errors, setErrors] = useState({});
   const [form, setForm] = useState(INITIAL_FORM);
   const [variants, setVariants] = useState([]);
   const [newCat, setNewCat] = useState('');

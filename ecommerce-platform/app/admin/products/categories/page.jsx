@@ -22,7 +22,7 @@ export default function CategoriesPage() {
     const prods = await storage.getProducts(client.id);
     return prods.reduce((acc, p) => { acc[p.category] = (acc[p.category] || 0) + 1; return acc; }, {});
   };
-  const [counts, setCounts] = useState>({});
+  const [counts, setCounts] = useState({});
   useEffect(() => { productCounts().then(setCounts); }, [client, categories]);
 
   const handleAdd = async () => {
