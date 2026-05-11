@@ -10,36 +10,44 @@ import ToastContainer from '@/components/shared/Toast';
 
 const nav = [
   { label: '📊 Dashboard', href: '/admin', exact: true },
-  { label: '🛍️ Products', href: '/admin/products', children: [
-    { label: 'All Products', href: '/admin/products' },
-    { label: 'Add Product', href: '/admin/products/new' },
-    { label: 'Categories', href: '/admin/products/categories' },
-  ]},
-  { label: '📦 Orders', href: '/admin/orders', children: [
-    { label: 'All Orders', href: '/admin/orders' },
-    { label: 'Pending', href: '/admin/orders/pending' },
-    { label: 'Tracking', href: '/admin/orders/tracking' },
-  ]},
-  { label: '👥 Customers', href: '/admin/customers', children: [
-    { label: 'All Customers', href: '/admin/customers' },
-    { label: 'Lead Tracker', href: '/admin/customers/leads' },
-    { label: 'Sessions', href: '/admin/customers/sessions' },
-  ]},
-  { label: '💬 Messages', href: '/admin/messages', children: [
-    { label: 'Inbox', href: '/admin/messages' },
-    { label: 'Auto-Responses', href: '/admin/messages/auto-responses' },
-    { label: 'Conversations', href: '/admin/messages/conversations' },
-  ]},
-  { label: '📈 Analytics', href: '/admin/analytics/sales', children: [
-    { label: 'Sales', href: '/admin/analytics/sales' },
-    { label: 'Revenue', href: '/admin/analytics/revenue' },
-    { label: 'Products', href: '/admin/analytics/products' },
-  ]},
-  { label: '⚙️ Operations', href: '/admin/operations/inventory', children: [
-    { label: 'Inventory', href: '/admin/operations/inventory' },
-    { label: 'Suppliers', href: '/admin/operations/suppliers' },
-    { label: 'Accounting', href: '/admin/operations/accounting' },
-  ]},
+  {
+    label: '🛍️ Products', href: '/admin/products', children: [
+      { label: 'All Products', href: '/admin/products' },
+      { label: 'Add Product', href: '/admin/products/new' },
+      { label: 'Categories', href: '/admin/products/categories' },
+    ]
+  },
+  {
+    label: '📦 Orders', href: '/admin/orders', children: [
+      { label: 'All Orders', href: '/admin/orders' },
+      { label: 'Pending', href: '/admin/orders/pending' },
+      // { label: 'Tracking', href: '/admin/orders/tracking' },
+    ]
+  },
+  { label: '👥 All Customers', href: '/admin/customers', exact: true }, // temporary
+  // They are commented out because, Inshallah, we plan to work on them in the future — not only because we lacked time to build all these features, but because they are not an immediate priority right now.
+  // {
+  //   label: '👥 Customers', href: '/admin/customers', children: [
+  //     { label: 'All Customers', href: '/admin/customers' },
+  //     { label: 'Lead Tracker', href: '/admin/customers/leads' },
+  //     { label: 'Sessions', href: '/admin/customers/sessions' },
+  //   ]
+  // },
+  // { label: '💬 Messages', href: '/admin/messages', children: [
+  //   { label: 'Inbox', href: '/admin/messages' },
+  //   { label: 'Auto-Responses', href: '/admin/messages/auto-responses' },
+  //   { label: 'Conversations', href: '/admin/messages/conversations' },
+  // ]},
+  // { label: '📈 Analytics', href: '/admin/analytics/sales', children: [
+  //   { label: 'Sales', href: '/admin/analytics/sales' },
+  //   { label: 'Revenue', href: '/admin/analytics/revenue' },
+  //   { label: 'Products', href: '/admin/analytics/products' },
+  // ]},
+  // { label: '⚙️ Operations', href: '/admin/operations/inventory', children: [
+  //   { label: 'Inventory', href: '/admin/operations/inventory' },
+  //   { label: 'Suppliers', href: '/admin/operations/suppliers' },
+  //   { label: 'Accounting', href: '/admin/operations/accounting' },
+  // ]},
 ];
 
 export default function AdminLayout({ children }) {
