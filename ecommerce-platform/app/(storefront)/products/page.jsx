@@ -11,15 +11,13 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [sort, setSort] = useState('newest');
-  const [primaryColor, setPrimaryColor] = useState('#3b82f6');
+  const primaryColor = '#3b82f6';
   const { addItem } = useCart();
   const [added, setAdded] = useState(null);
 
   useEffect(() => { const _run = async () => {
     const cid = await storage.getCartClientId();
     if (!cid) return;
-    const client = await storage.getClient(cid);
-    if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
     const allProds = await storage.getProducts(cid);
     setProducts(allProds.filter(p => p.status === 'active'));
     setCategories(await storage.getCategories(cid));

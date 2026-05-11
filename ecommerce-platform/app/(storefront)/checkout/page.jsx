@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/hooks/useCart';
 import { storage } from '@/lib/storage';
@@ -11,34 +11,19 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(1);
   const [placing, setPlacing] = useState(false);
   const [orderId, setOrderId] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#3b82f6');
-  const [shippingRate, setShippingRate] = useState(60);
-  const [freeThreshold, setFreeThreshold] = useState(1000);
+  const primaryColor = '#3b82f6';
+  const shippingRate = 60;
+  const freeThreshold = 1000;
 
-  const [enabledPayments, setEnabledPayments] = useState([{v:'cod',l:'💵 Cash on Delivery',d:'Pay when you receive'}]);
+  const enabledPayments = [
+    { v: 'cod', l: '💵 Cash on Delivery', d: 'Pay when you receive' },
+    { v: 'bkash', l: '📱 bKash', d: 'Send to 01700000000' },
+    { v: 'nagad', l: '📱 Nagad', d: 'Send to 01800000000' },
+  ];
   const [form, setForm] = useState({ name:'',phone:'',email:'',address:'',city:'Dhaka',notes:'',paymentMethod:'cod' });
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    const _run = async () => {
-        const cid = await storage.getCartClientId();
-      if (!cid) return;
-      const client = await storage.getClient(cid);
-      if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
-      if (client?.shippingSettings) { setShippingRate(client.shippingSettings.flatRate); setFreeThreshold(client.shippingSettings.freeShippingThreshold); }
-      // Build enabled payment methods from admin settings
-      if (client?.paymentSettings) {
-        const ps = client.paymentSettings;
-        const methods = [];
-        if (ps.cod) methods.push({v:'cod',l:'💵 Cash on Delivery',d:'Pay when you receive'});
-        if (ps.bkash?.enabled) methods.push({v:'bkash',l:'📱 bKash',d:`Send to ${ps.bkash.merchantNumber}`});
-        if (ps.nagad?.enabled) methods.push({v:'nagad',l:'📱 Nagad',d:`Send to ${ps.nagad.merchantNumber}`});
-        if (ps.bankTransfer?.enabled) methods.push({v:'bank',l:'🏦 Bank Transfer',d:'Transfer to bank account'});
-        if (methods.length > 0) setEnabledPayments(methods);
-      }
-    };
-    _run();
-  }, []);
+
 
   const shipping = subtotal >= freeThreshold ? 0 : shippingRate;
   const total = subtotal + shipping;

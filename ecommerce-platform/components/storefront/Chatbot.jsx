@@ -7,14 +7,12 @@ export default function Chatbot() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [autoResponses, setAutoResponses] = useState([]);
-  const [storeName, setStoreName] = useState('Store');
+  const storeName = 'Demo Store';
   const messagesEnd = useRef(null);
 
   useEffect(() => { const _run = async () => {
     const cid = await storage.getCartClientId();
     if (!cid) return;
-    const client = await storage.getClient(cid);
-    if (client?.storefrontSettings) setStoreName(client.storefrontSettings.storeName);
     const allResponses = await storage.getAutoResponses(cid);
     setAutoResponses(allResponses.filter(r => r.isActive));
   }; _run(); }, []);

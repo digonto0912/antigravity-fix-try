@@ -2,25 +2,14 @@
 import Link from 'next/link';
 import { useCart } from '@/hooks/useCart';
 import { formatCurrency } from '@/lib/utils';
-import { useState, useEffect } from 'react';
-import { storage } from '@/lib/storage';
+
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, subtotal, itemCount } = useCart();
-  const [primaryColor, setPrimaryColor] = useState('#3b82f6');
-  const [shippingRate, setShippingRate] = useState(60);
-  const [freeThreshold, setFreeThreshold] = useState(1000);
+  const primaryColor = '#3b82f6';
+  const shippingRate = 60;
+  const freeThreshold = 1000;
 
-  useEffect(() => {
-    const _run = async () => {
-        const cid = await storage.getCartClientId();
-      if (!cid) return;
-      const client = await storage.getClient(cid);
-      if (client?.storefrontSettings) setPrimaryColor(client.storefrontSettings.primaryColor);
-      if (client?.shippingSettings) { setShippingRate(client.shippingSettings.flatRate); setFreeThreshold(client.shippingSettings.freeShippingThreshold); }
-    };
-    _run();
-  }, []);
 
   const shipping = subtotal >= freeThreshold ? 0 : shippingRate;
   const total = subtotal + shipping;

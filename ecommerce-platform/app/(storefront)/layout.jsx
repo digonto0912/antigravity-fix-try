@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { storage } from '@/lib/storage';
+
 import { useCart } from '@/hooks/useCart';
 import { useToast } from '@/hooks/useToast';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
@@ -27,7 +27,7 @@ export default function StorefrontLayout({ children }) {
   const { itemCount } = useCart();
   const { toasts, removeToast } = useToast();
   const { customer, loginWithGoogle, logout, showLoginModal, setShowLoginModal } = useCustomerAuth();
-  const [storeName, setStoreName] = useState('Store');
+
   const [mobileMenu, setMobileMenu] = useState(false);
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,17 +36,7 @@ export default function StorefrontLayout({ children }) {
   useTracking();
   useSessionRecorder();
 
-  useEffect(() => {
-    const init = async () => {
-      const cid = await storage.getCartClientId();
-      if (!cid) return;
-      const client = await storage.getClient(cid);
-      if (client?.storefrontSettings) {
-        setStoreName(client.storefrontSettings.storeName);
-      }
-    };
-    init().catch(console.error);
-  }, []);
+
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -84,7 +74,7 @@ export default function StorefrontLayout({ children }) {
 
           {/* Logo */}
           <Link href="/" className="sf-header__logo" aria-label="Homepage">
-            {storeName}
+            Demo Store
           </Link>
 
           {/* Search bar */}

@@ -70,10 +70,6 @@ export function useAuth() {
         plan: 'free',
         status: 'active',
         logo: user.photoURL || undefined,
-        storefrontSettings: { storeName: businessName, tagline: 'Welcome to our store', primaryColor: '#3b82f6', secondaryColor: '#8b5cf6', currency: 'BDT' },
-        shippingSettings: { flatRate: 60, freeShippingThreshold: 1000, deliveryAreas: ['Dhaka', 'Chittagong'], estimatedDeliveryTime: '3-5 business days' },
-        paymentSettings: { cod: true, bkash: { enabled: false, merchantNumber: '' }, nagad: { enabled: false, merchantNumber: '' }, bankTransfer: { enabled: false, accountDetails: '' } },
-        notifications: { emailNewOrder: true, emailLowStock: true, emailNewCustomer: true, emailNewMessage: true, smsNewOrder: false, smsLowStock: false, smsNewCustomer: false, smsNewMessage: false, notificationEmail: email },
         createdAt: now, updatedAt: now,
       };
       await storage.addClient(newClient);
@@ -96,10 +92,6 @@ export function useAuth() {
       email, password, businessName,
       subdomain: businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       plan: 'free', status: 'active',
-      storefrontSettings: { storeName: businessName, tagline: 'Welcome to our store', primaryColor: '#3b82f6', secondaryColor: '#8b5cf6', currency: 'BDT' },
-      shippingSettings: { flatRate: 60, freeShippingThreshold: 1000, deliveryAreas: ['Dhaka', 'Chittagong'], estimatedDeliveryTime: '3-5 business days' },
-      paymentSettings: { cod: true, bkash: { enabled: false, merchantNumber: '' }, nagad: { enabled: false, merchantNumber: '' }, bankTransfer: { enabled: false, accountDetails: '' } },
-      notifications: { emailNewOrder: true, emailLowStock: true, emailNewCustomer: true, emailNewMessage: true, smsNewOrder: false, smsLowStock: false, smsNewCustomer: false, smsNewMessage: false, notificationEmail: email },
       createdAt: now, updatedAt: now,
     };
     await storage.addClient(newClient);

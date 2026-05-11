@@ -39,7 +39,6 @@ const nav = [
     { label: 'Inventory', href: '/admin/operations/inventory' },
     { label: 'Suppliers', href: '/admin/operations/suppliers' },
     { label: 'Accounting', href: '/admin/operations/accounting' },
-    { label: 'Settings', href: '/admin/operations/settings' },
   ]},
 ];
 

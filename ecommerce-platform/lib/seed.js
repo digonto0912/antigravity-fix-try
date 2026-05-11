@@ -16,10 +16,6 @@ export async function seedData() {
 
   const client = {
     id: cid, email: 'demo@example.com', password: 'demo123', businessName: 'Demo Store', subdomain: 'demo-store', plan: 'pro', status: 'active',
-    storefrontSettings: { storeName: 'Demo Store', tagline: 'Quality Products, Best Prices', primaryColor: '#3b82f6', secondaryColor: '#8b5cf6', currency: 'BDT' },
-    shippingSettings: { flatRate: 60, freeShippingThreshold: 1000, deliveryAreas: ['Dhaka','Chittagong','Sylhet','Rajshahi','Khulna','Barisal'], estimatedDeliveryTime: '3-5 business days' },
-    paymentSettings: { cod: true, bkash: { enabled: true, merchantNumber: '01700000000' }, nagad: { enabled: true, merchantNumber: '01800000000' }, bankTransfer: { enabled: false, accountDetails: '' } },
-    notifications: { emailNewOrder: true, emailLowStock: true, emailNewCustomer: true, emailNewMessage: true, smsNewOrder: false, smsLowStock: false, smsNewCustomer: false, smsNewMessage: false, notificationEmail: 'demo@example.com' },
     createdAt: now, updatedAt: now,
   };
   await storage.addClient(client);

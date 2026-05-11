@@ -31,7 +31,7 @@ const PRODUCT_CARD_COLORS = ['#521c11', '#6d8797', '#1b7f6d', '#aaadad', '#d6d0c
 
 export default function StorefrontHome() {
   const [products, setProducts] = useState([]);
-  const [storeName, setStoreName] = useState('Store');
+
   const { addItem } = useCart();
   const [added, setAdded] = useState(null);
 
@@ -39,10 +39,6 @@ export default function StorefrontHome() {
     const _run = async () => {
       const cid = await storage.getCartClientId();
       if (!cid) return;
-      const client = await storage.getClient(cid);
-      if (client?.storefrontSettings) {
-        setStoreName(client.storefrontSettings.storeName);
-      }
       const allProds = await storage.getProducts(cid);
       setProducts(allProds.filter(p => p.status === 'active').slice(0, 12));
     };
