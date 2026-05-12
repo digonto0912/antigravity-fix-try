@@ -1,8 +1,11 @@
 'use client';
+import { useState } from 'react';
 import { Check, Clock, Truck, ShieldCheck, Leaf, ChevronUp, Circle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function AccordionSections({ openSections, toggleSection, description, category, sku }) {
+  const [descExpanded, setDescExpanded] = useState(false);
+
   return (
     <div className="divide-y divide-sf-border-light border-t border-b border-sf-border-light mt-8">
       {/* Item Details */}
@@ -28,10 +31,17 @@ export function AccordionSections({ openSections, toggleSection, description, ca
                     </li>
                   </ul>
                 </div>
-                <div className="relative group">
-                  <p className="text-[15.3px] leading-relaxed text-sf-primary/80 line-clamp-4">{description}</p>
-                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-sf-bg-primary via-sf-bg-primary/80 to-transparent pointer-events-none" />
-                  <button className="relative z-10 w-full pt-3 text-[13px] font-bold hover:underline underline-offset-4 decoration-sf-primary/30 hover:decoration-sf-primary">Learn more about this item</button>
+                <div className="relative">
+                  <p className={`text-[15.3px] leading-relaxed text-sf-primary/80 ${descExpanded ? '' : 'line-clamp-4'}`}>{description}</p>
+                  {!descExpanded && (
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-sf-bg-primary via-sf-bg-primary/80 to-transparent pointer-events-none" />
+                  )}
+                  <button
+                    onClick={() => setDescExpanded(!descExpanded)}
+                    className="relative z-10 w-full pt-3 text-[13px] font-bold hover:underline underline-offset-4 decoration-sf-primary/30 hover:decoration-sf-primary"
+                  >
+                    {descExpanded ? 'Show less' : 'Learn more about this item'}
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -99,69 +109,90 @@ export function AccordionSections({ openSections, toggleSection, description, ca
   );
 }
 
-export function ReviewsSection() {
-  const reviews = [
-    { name: 'Happy buyer', date: '08 May, 2026', text: 'The product was beautiful and as described. Excellent customer service and communication. Would buy again!' },
-    { name: 'Sarah', date: '05 May, 2026', text: 'Great quality, very happy with my purchase. Fast delivery too.' },
-  ];
+export function ReviewsSection({ reviews = [] }) {
+  const [selectedCategory, setSelectedCategory] = useState(null);
+
+  // Compute stats from reviews
+  const totalReviews = reviews.length;
+  const avgRating = totalReviews > 0
+    ? (reviews.reduce((sum, r) => sum + (r.stars || 5), 0) / totalReviews).toFixed(1)
+    : '0.0';
+
+  // Category counts
+  const categoryCounts = {};
+  reviews.forEach(r => {
+    const cat = r.category || 'General';
+    categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+  });
+
+  // Filter by selected category
+  const filtered = selectedCategory
+    ? reviews.filter(r => (r.category || 'General') === selectedCategory)
+    : reviews;
+
+  if (totalReviews === 0) {
+    return (
+      <section className="pt-12 border-t border-sf-border-light">
+        <h2 className="text-2xl font-sf-serif tracking-tight mb-4 text-sf-primary">Reviews for this item</h2>
+        <p className="text-[15px] text-sf-primary-light">No reviews yet. Be the first to share your experience!</p>
+      </section>
+    );
+  }
 
   return (
     <>
       {/* Desktop Reviews */}
       <section className="hidden lg:block pt-12 border-t border-sf-border-light">
         <h2 className="text-2xl font-sf-serif tracking-tight mb-4 text-sf-primary">Reviews for this item</h2>
-        <div className="bg-sf-bg-primary py-4 mb-8">
-          <p className="text-[14px] text-sf-primary leading-relaxed">
-            <span className="font-bold">Buyer highlights, summarised by AI:</span>{' '}
-            Beautiful · Very pretty · Looks great · Great quality · Fast delivery · As described · Excellent communication
-          </p>
-        </div>
         <div className="flex items-center gap-12 mb-8">
           <div className="flex items-baseline gap-4">
-            <div className="text-[48px] font-sf-serif tracking-tight">4.7</div>
+            <div className="text-[48px] font-sf-serif tracking-tight">{avgRating}</div>
             <div className="space-y-1">
-              <div className="flex gap-0.5">{[...Array(5)].map((_, i) => <StarIcon key={i} />)}</div>
+              <div className="flex gap-0.5">{[...Array(5)].map((_, i) => <StarIcon key={i} filled={i < Math.round(Number(avgRating))} />)}</div>
               <div className="text-[14px] underline cursor-pointer hover:opacity-70 transition-opacity">Item average</div>
-              <div className="text-[13px] text-sf-primary-lighter">(21 reviews)</div>
+              <div className="text-[13px] text-sf-primary-lighter">({totalReviews} review{totalReviews !== 1 ? 's' : ''})</div>
             </div>
           </div>
-          <div className="flex gap-8 lg:gap-12 flex-wrap">
-            {[{ label: 'Item quality', val: '4.7' }, { label: 'Delivery', val: '4.8' }, { label: 'Customer service', val: '5.0' }, { label: 'Buyers recommend', val: '100%' }].map((m, i) => (
-              <div key={i} className="flex flex-col items-center gap-2">
-                <span className="text-[12px] text-center leading-tight text-sf-primary-light" dangerouslySetInnerHTML={{ __html: m.label.replace(' ', '<br/>') }} />
-                <span className="bg-sf-bg-secondary px-4 py-1.5 rounded-full text-[14px] font-bold">{m.val}</span>
-              </div>
+        </div>
+        {Object.keys(categoryCounts).length > 0 && (
+          <div className="flex flex-wrap gap-2.5 mb-8">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`px-5 py-2.5 rounded-full text-[13.5px] font-bold transition-colors ${!selectedCategory ? 'bg-sf-primary text-white' : 'bg-black/5 hover:bg-black/10'}`}
+            >
+              All ({totalReviews})
+            </button>
+            {Object.entries(categoryCounts).map(([cat, count]) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                className={`px-5 py-2.5 rounded-full text-[13.5px] font-bold transition-colors ${selectedCategory === cat ? 'bg-sf-primary text-white' : 'bg-black/5 hover:bg-black/10'}`}
+              >
+                {cat} ({count})
+              </button>
             ))}
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2.5 mb-8">
-          {['Appearance (11)', 'Description accuracy (3)', 'Delivery & Packaging (3)', 'Quality (2)'].map((f, i) => (
-            <button key={i} className="px-5 py-2.5 bg-black/5 rounded-full text-[13.5px] font-bold hover:bg-black/10 transition-colors">{f}</button>
-          ))}
-        </div>
+        )}
         <div className="space-y-10 mb-12">
-          {reviews.map((review, i) => (
-            <div key={i} className="pb-8 border-b border-sf-border-light last:border-0 hover:bg-black/[0.01] transition-colors -mx-4 px-4 rounded-lg">
+          {filtered.map((review, i) => (
+            <div key={review.id || i} className="pb-8 border-b border-sf-border-light last:border-0 hover:bg-black/[0.01] transition-colors -mx-4 px-4 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <div className="flex gap-0.5">{[...Array(5)].map((_, j) => <StarIcon key={j} />)}</div>
-                <span className="font-bold ml-2 text-lg">5</span>
-                <span className="text-[10px] uppercase font-bold border border-sf-border px-2 py-0.5 rounded-sm tracking-wider">This item</span>
+                <div className="flex gap-0.5">{[...Array(5)].map((_, j) => <StarIcon key={j} filled={j < (review.stars || 5)} />)}</div>
+                <span className="font-bold ml-2 text-lg">{review.stars || 5}</span>
+                {review.category && <span className="text-[10px] uppercase font-bold border border-sf-border px-2 py-0.5 rounded-sm tracking-wider">{review.category}</span>}
               </div>
               <div className="flex items-center gap-3 text-[14px] mb-4">
                 <div className="w-5 h-5 rounded-full bg-sf-bg-secondary flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-sf-primary-light">{review.name[0]}</span>
+                  <span className="text-[10px] font-bold text-sf-primary-light">{(review.username || 'A')[0]}</span>
                 </div>
-                <span className="font-bold decoration-dotted underline underline-offset-4 hover:decoration-solid cursor-pointer">{review.name}</span>
+                <span className="font-bold decoration-dotted underline underline-offset-4 hover:decoration-solid cursor-pointer">{review.username || 'Anonymous'}</span>
                 <span className="text-sf-border-light font-light">|</span>
-                <span className="text-sf-primary-light">{review.date}</span>
+                <span className="text-sf-primary-light">{review.date || ''}</span>
               </div>
               <p className="text-[16px] leading-relaxed text-sf-primary max-w-2xl">{review.text}</p>
             </div>
           ))}
         </div>
-        <button className="px-10 py-4 border-2 border-sf-primary rounded-full text-[14px] font-bold hover:bg-sf-primary hover:text-white transition-all transform active:scale-[0.98]">
-          View all reviews for this item
-        </button>
       </section>
 
       {/* Mobile Reviews */}
@@ -169,10 +200,18 @@ export function ReviewsSection() {
         <div className="max-w-md mx-auto">
           <h2 className="text-2xl font-sf-serif mb-8 text-center italic">Buyer reviews</h2>
           <div className="flex flex-col items-center text-center">
-            <div className="text-6xl font-sf-serif mb-2">4.7</div>
-            <div className="flex gap-1 mb-4">{[...Array(5)].map((_, i) => <StarIcon key={i} size={24} />)}</div>
-            <p className="text-[15px] text-sf-primary-light mb-10 max-w-[280px]">Highly recommended by shoppers for quality and fast delivery.</p>
-            <button className="w-full py-4 bg-sf-primary text-white rounded-full font-bold shadow-lg hover:bg-black active:scale-95 transition-all">Read all reviews</button>
+            <div className="text-6xl font-sf-serif mb-2">{avgRating}</div>
+            <div className="flex gap-1 mb-4">{[...Array(5)].map((_, i) => <StarIcon key={i} size={24} filled={i < Math.round(Number(avgRating))} />)}</div>
+            <p className="text-[15px] text-sf-primary-light mb-6">{totalReviews} review{totalReviews !== 1 ? 's' : ''}</p>
+            <div className="space-y-6 w-full text-left mb-8">
+              {filtered.slice(0, 3).map((review, i) => (
+                <div key={review.id || i} className="pb-4 border-b border-sf-border-light last:border-0">
+                  <div className="flex gap-0.5 mb-1">{[...Array(5)].map((_, j) => <StarIcon key={j} size={14} filled={j < (review.stars || 5)} />)}</div>
+                  <p className="text-[14px] text-sf-primary line-clamp-3">{review.text}</p>
+                  <p className="text-[12px] text-sf-primary-light mt-1">— {review.username || 'Anonymous'}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -180,9 +219,9 @@ export function ReviewsSection() {
   );
 }
 
-function StarIcon({ size = 16 }) {
+function StarIcon({ size = 16, filled = true }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sf-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={filled ? 'text-sf-primary' : 'text-sf-primary/20'}>
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   );
