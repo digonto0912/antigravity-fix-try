@@ -4,9 +4,11 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { useLicenseCheck } from '@/hooks/useLicenseCheck';
 import { seedData } from '@/lib/seed';
 import { storage } from '@/lib/storage';
 import ToastContainer from '@/components/shared/Toast';
+import LicenseBlockOverlay from '@/components/shared/LicenseBlockOverlay';
 
 const nav = [
   { label: '📊 Dashboard', href: '/admin', exact: true },
@@ -54,6 +56,7 @@ const nav = [
 export default function AdminLayout({ children }) {
   const { client, loading, logout } = useAuth();
   const { toasts, addToast, removeToast } = useToast();
+  const { isBlocked, isLoading: licenseLoading, contactPhone } = useLicenseCheck();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -129,6 +132,7 @@ export default function AdminLayout({ children }) {
         <main className="flex-1 p-4 lg:p-6 overflow-auto">{children}</main>
       </div>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+      {isBlocked && <LicenseBlockOverlay contactPhone={contactPhone} />}
     </div>
   );
 }

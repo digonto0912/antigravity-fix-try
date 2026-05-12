@@ -1,12 +1,21 @@
-export type ClientStatus = 'active' | 'inactive' | 'expired';
+import { ClientFirebaseConfig } from './lib/clientFirebase';
+
+export type ClientStatus = 'active' | 'paused' | 'expired';
 
 export interface Client {
   id: string;
   name: string;
   domain: string;
-  status: ClientStatus;
-  lastSync: string;
-  expiryDate: string;
-  envConfig: string; // The "Code Canvas" content
   colabGmail: string;
+  envConfig: string;           // Raw env text (the code canvas content)
+  firebaseConfig: ClientFirebaseConfig | null; // Parsed from envConfig
+  status: ClientStatus;
+  expiryDate: string;          // YYYY-MM-DD
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MasterSettings {
+  contactPhone: string;
+  updatedAt: string;
 }
