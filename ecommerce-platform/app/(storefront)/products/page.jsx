@@ -95,8 +95,6 @@ function ProductsContent() {
         </select>
       </div>
 
-      <p className="sf-products__count">{filtered.length} products found</p>
-
       {filtered.length > 0 ? (
         <div className="sf-products__grid">
           {filtered.map(p => {
@@ -117,12 +115,12 @@ function ProductsContent() {
                 </Link>
                 <div className="sf-products__card-body">
                   <Link href={`/products/${p.id}`} className="sf-products__card-name">{p.name}</Link>
-                  <p className="sf-products__card-category">{p.category}</p>
+                  {/* <p className="sf-products__card-category">{p.category}</p> */}
                   <div className="sf-products__card-prices">
                     {p.salePrice ? (
                       <>
-                        <span className="sf-products__card-price sf-products__card-price--sale">{formatCurrency(p.salePrice)}</span>
                         <span className="sf-products__card-price sf-products__card-price--original">{formatCurrency(p.basePrice)}</span>
+                        <span className="sf-products__card-price sf-products__card-price--sale">{formatCurrency(p.salePrice)}</span>
                       </>
                     ) : (
                       <span className="sf-products__card-price">{formatCurrency(p.basePrice)}</span>
