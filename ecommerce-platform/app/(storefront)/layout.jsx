@@ -297,7 +297,7 @@ export default function StorefrontLayout({ children }) {
               Enter your phone number
             </label>
             <input className="sf-newsletter__input" id="sf-newsletter-phone" type="tel" placeholder="01XXXXXXXXX" autoComplete="tel" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
-            <button className="sf-newsletter__btn" type="submit">{phoneSaved ? '✓ Saved!' : 'Subscribe'}</button>
+            <button className="sf-newsletter__btn" type="submit">{phoneSaved ? '✓ Saved!' : 'Discount'}</button>
           </form>
         </div>
 
@@ -328,12 +328,11 @@ export default function StorefrontLayout({ children }) {
               </ul>
             </div>
             <div>
-              <h3 className="sf-footer-col__heading">Help</h3>
+              <h3 className="sf-footer-col__heading">Pages</h3>
               <ul className="sf-footer-col__list">
-                <li className="sf-footer-col__item"><Link href="#">Contact Us</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Shipping Info</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Returns</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">FAQ</Link></li>
+                <li className="sf-footer-col__item"><Link href="/">Home</Link></li>
+                <li className="sf-footer-col__item"><Link href="/products">Products</Link></li>
+                <li className="sf-footer-col__item"><Link href="/cart">Cart</Link></li>
               </ul>
             </div>
           </nav>
@@ -346,7 +345,7 @@ export default function StorefrontLayout({ children }) {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
               Bangladesh &nbsp;|&nbsp; English (US) &nbsp;|&nbsp; ৳ (BDT)
             </div>
-            <span className="sf-footer-bottom__copyright">© {new Date().getFullYear()}</span>
+            <span className="sf-footer-bottom__copyright">© {new Date().getFullYear()} All Rights Reserved</span>
             <nav className="sf-footer-bottom__links" aria-label="Legal links">
               <a href="#" className="sf-footer-bottom__link">Terms of Use</a>
               <a href="#" className="sf-footer-bottom__link">Privacy</a>

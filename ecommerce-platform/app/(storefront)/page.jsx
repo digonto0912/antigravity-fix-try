@@ -122,7 +122,7 @@ export default function StorefrontHome() {
                       />
                       <div className="interest-card__footer">
                         <div className="interest-card__name">{cat.name}</div>
-                        <div className="interest-card__sub">abc</div>
+                        <div className="interest-card__sub">See more</div>
                       </div>
                     </Link>
                   </li>
@@ -137,7 +137,7 @@ export default function StorefrontHome() {
       {best5.length > 0 && (
         <section className="spring-section" aria-labelledby="spring-heading">
           <div className="spring-section__inner">
-            <h2 className="section-heading" id="spring-heading">Discover our best of spring 2026</h2>
+            <h2 className="section-heading" id="spring-heading">Discover our best</h2>
             <ul className="spring-grid">
               {best5.map(p => (
                 <li key={p.id}>
@@ -163,7 +163,7 @@ export default function StorefrontHome() {
         <section className="eid-section" aria-labelledby="eid-heading">
           <div className="eid-section__inner">
             <div className="eid-section__left">
-              <h2 className="eid-section__title" id="eid-heading">Etsy-special gifts for Eid</h2>
+              <h2 className="eid-section__title" id="eid-heading">Special pieces</h2>
               <Link href="/products" className="eid-section__btn">Get inspired</Link>
             </div>
             <div className="eid-section__right">
@@ -208,12 +208,12 @@ export default function StorefrontHome() {
                       }
                     />
                     <div className="product-card__price">
-                      {formatCurrency(p.salePrice || p.basePrice)}
                       {p.salePrice && (
                         <span className="product-card__price-original">
                           {formatCurrency(p.basePrice)}
                         </span>
                       )}
+                      {formatCurrency(p.salePrice || p.basePrice)}
                     </div>
                   </Link>
                 </li>

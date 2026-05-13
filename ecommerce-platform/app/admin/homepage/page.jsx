@@ -173,12 +173,14 @@ export default function AdminHomepagePage() {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Heading</label>
-            <input value={hero.leftHeading} onChange={e => setHero({ ...hero, leftHeading: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            <input value={hero.leftHeading} onChange={e => setHero({ ...hero, leftHeading: e.target.value })} maxLength={29} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            <p className="text-xs text-gray-500 mt-1">Maximum 29 characters</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">CTA Button Text</label>
-              <input value={hero.leftCta} onChange={e => setHero({ ...hero, leftCta: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              <input value={hero.leftCta} onChange={e => setHero({ ...hero, leftCta: e.target.value })} maxLength={18} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              <p className="text-xs text-gray-500 mt-1">Maximum 18 characters</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">CTA Link</label>
@@ -208,12 +210,14 @@ export default function AdminHomepagePage() {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-            <input value={hero.rightTitle} onChange={e => setHero({ ...hero, rightTitle: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            <input value={hero.rightTitle} onChange={e => setHero({ ...hero, rightTitle: e.target.value })} maxLength={41} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            <p className="text-xs text-gray-500 mt-1">Maximum 42 characters</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Link Text</label>
-              <input value={hero.rightLinkText} onChange={e => setHero({ ...hero, rightLinkText: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              <input value={hero.rightLinkText} onChange={e => setHero({ ...hero, rightLinkText: e.target.value })} maxLength={8} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              <p className="text-xs text-gray-500 mt-1">Maximum 8 characters</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Link URL</label>
