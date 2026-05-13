@@ -24,7 +24,7 @@ const nav = [
     label: '📦 Orders', href: '/admin/orders', children: [
       { label: 'All Orders', href: '/admin/orders' },
       { label: 'Pending', href: '/admin/orders/pending' },
-      // { label: 'Tracking', href: '/admin/orders/tracking' },
+      { label: 'Shipping', href: '/admin/orders/shipping' },
     ]
   },
   { label: '👥 All Customers', href: '/admin/customers', exact: true }, // temporary

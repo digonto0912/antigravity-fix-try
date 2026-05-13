@@ -1,289 +1,186 @@
-# E-Commerce Platform — Critical Bug Fixes & Feature Implementation
+# Storefront Overhaul — Cart, Product Details, Navigation, Theme & New Pages
 
-This plan addresses all 10 issues: bug fixes across admin/storefront data sync, checkout, auth, input focus, dashboard metrics, UI contrast, product creation, auto-refresh; plus new Lead Tracking and Session Recording systems.
+Comprehensive refactoring of the ecommerce platform addressing cart simplification, product detail cleanup, admin shipping management, dynamic logos, search functionality, theme consistency, and new page creation.
 
 ---
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Google OAuth**: You must enable Google Sign-In in your Firebase Console (`Authentication → Sign-in method → Google → Enable`). I'll write the code, but it won't work until the provider is enabled in Firebase.
+> **Shipping Cost Model**: You want shipping cost to be quantity-based and set from admin. I'll create a shipping configuration where admin sets a **per-item shipping cost** (e.g., ৳30/item × 3 items = ৳90). Should it instead be tiered (e.g., 1-5 items = ৳60, 6-10 items = ৳100), or is per-item sufficient?
 
 > [!IMPORTANT]
-> **MongoDB Atlas**: For session recording storage (Issue #10) and behavioral tracking (Issue #9), you'll need to provide a MongoDB connection string. Since this is a **Next.js frontend-only app** (no custom API routes yet), I'll create **Next.js API routes** (`/api/sessions`, `/api/tracking`) that connect to MongoDB from the server side. Please confirm your MongoDB Atlas connection string, or I can set up a placeholder you fill in later.
+> **Discount Model**: Currently `salePrice` exists on each product (set by admin in product edit). Should I also add a **global discount** (e.g., admin sets 10% off all products) in a separate admin settings page? Or is per-product `salePrice` enough?
 
 > [!WARNING]
-> **Facebook CDN for images**: The request mentions storing product images on "Facebook CDN". Facebook does not offer a public CDN for arbitrary image hosting. For now, I'll implement image upload via **URL input** (paste any hosted image URL — Facebook post images, Imgur, etc.) and store the URL in Firestore. If you have a specific image hosting workflow, please clarify.
-
-> [!WARNING]
-> **rrweb library size**: rrweb adds ~80KB gzipped to the client bundle. With MongoDB Free Tier's 512MB limit, continuous recording for all visitors will fill storage quickly. I'll implement the 30-day auto-purge as requested.
+> **Login/Signup Pages**: Currently auth is Google-only via popup modal. Creating dedicated `/login` and `/signup` pages — should these still be Google-only, or do you want email/password signup too? (Email/password would require Firebase Email Auth setup.)
 
 ## Open Questions
 
-> [!IMPORTANT]
-> 1. **MongoDB Connection String**: Please provide your MongoDB Atlas connection string (format: `mongodb+srv://user:pass@cluster.mongodb.net/dbname`). I'll store it in `.env.local`.
-> 2. **Canvas Fingerprinting**: This technique is increasingly blocked by browsers and has privacy/legal concerns (GDPR). Shall I proceed with it, or use a more reliable approach like `FingerprintJS` (open-source, more accurate, less legally risky)?
-> 3. **Payment Integration**: You mention fixing checkout but only have COD, bKash, and Nagad. bKash/Nagad are already in the UI — should I implement actual payment gateway integration, or just ensure the existing payment method selection works correctly with order processing?
+1. **Wishlist persistence** — Should wishlists persist in Firestore (requiring login) or localStorage (per device, no login needed)?
+2. **Footer content** — The footer currently has Etsy branding (e.g., "Etsy blog", "Sell on Etsy"). Should I replace all these with generic placeholder links, or should admin manage footer links too?
+3. **Logo formats** — You mention navbar logo (wide/text) and footer logo (icon). Should admin upload these two separately, or one logo used everywhere? Plan assumes two separate logo slots (navbar + footer).
 
 ---
 
 ## Proposed Changes
 
-The work is organized into 8 phases, ordered by dependency (foundational fixes first, new features last).
+### Phase 1: Cart & Shipping (Admin + Storefront)
+
+#### [NEW] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/orders/shipping/page.jsx)
+- New admin page at `/admin/orders/shipping` for managing shipping costs
+- Admin sets **per-item shipping cost** (quantity-based: cost × quantity)
+- Stored in Firestore at `clients/{clientId}/settings/shipping`
+- Fields: `perItemCost` (number), `enabled` (boolean)
+
+#### [MODIFY] [layout.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/layout.jsx)
+- Add "Shipping" link under Orders section in admin nav
+
+#### [MODIFY] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/cart/page.jsx)
+- Remove `city` input field and `BD_CITIES` import
+- Remove free shipping logic (`freeThreshold`, `shipping === 0` checks)
+- Fetch shipping cost from Firestore settings (per-item × total quantity)
+- Remove `city` from order data
+
+#### [MODIFY] [storage.js](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/lib/storage.js)
+- Add `getSettings(clientId, key)` and `saveSettings(clientId, key, data)` methods for shipping/discount/logo configs
 
 ---
 
-### Phase 1: Fix Admin Input Focus Loss (Issues #4, #7)
+### Phase 2: Product Detail Page Cleanup
 
-**Root Cause**: The `setForm({...form, field: value})` pattern creates a new object on every keystroke. Combined with `useEffect` hooks that depend on `form.name` (line 21 in `new/page.tsx`), this triggers re-renders that steal focus.
+#### [MODIFY] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/products/[id]/page.jsx)
+- **Remove fake discount**: Delete countdown timer, fake 20% inflation, cookie-based timer logic
+- **Show real discount**: Only display discount when `product.salePrice` exists and is less than `basePrice`
+- **Hide reviews section**: Remove `<ReviewsSection>` component render
+- **Hide "Delivery and return policies" & "Did you know?"**: Remove from `<AccordionSections>` — only keep "Item details"
+- **Show ALL related products**: Remove `.slice(0, 6)` — show all filtered products with horizontal scroll or grid
+- **Fix nav/wishlist button icons**: Use consistent `ChevronLeft`/`ChevronRight` icons, add white bg with shadow for visibility on dark images
+- **Fix image gallery height**: Implement Alibaba-style gallery — thumbnails get fixed height matching main image, with up/down scroll buttons (no visible scrollbar)
+- **Make wishlist functional**: Integrate with localStorage-based wishlist state, toggle save/unsave
+- **Mobile-first responsive**: Rework grid to be mobile-first (single column → desktop 2-col)
 
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/products/new/page.tsx)
-- Replace `useEffect` that auto-generates SKU/slug on `form.name` change — this is the primary culprit causing re-renders
-- Use `useRef` for the form state to prevent unnecessary re-renders, or use `useCallback` with stable references
-- Use a debounced approach: only generate SKU/slug on blur, not on every keystroke
-- Ensure the `Field` component is defined **outside** the render function (it's currently inline, causing remounts)
+#### [MODIFY] [ProductDetailSections.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/components/storefront/ProductDetailSections.jsx)
+- Remove "Delivery and return policies" accordion section
+- Remove "Did you know?" accordion section
+- Remove `ReviewsSection` export (hide from storefront)
 
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/operations/suppliers/page.tsx)
-- Same pattern fix for supplier form inputs in modal
-
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/operations/accounting/page.tsx)
-- Same pattern fix for accounting form inputs in modal
-
-**All admin pages with forms**: Extract the `Field` component to a shared component file. Use `useCallback` for form change handlers to maintain stable references.
-
----
-
-### Phase 2: Fix Checkout Redirect & Payment System (Issue #2)
-
-**Root Cause**: Line 91-94 in checkout `page.tsx`:
-```tsx
-if (items.length === 0 && step !== 3) {
-  router.push('/cart');
-  return null;
-}
-```
-The `useCart` hook's `items` starts as `[]` and is populated asynchronously. On first render, `items.length === 0` is true → immediate redirect before cart data loads.
-
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/%28storefront%29/checkout/page.tsx)
-- Wait for cart `loaded` state before checking items (the hook already exposes `loaded`)
-- Change the guard to: `if (loaded && items.length === 0 && step !== 3)`
-- Payment methods are already in the UI (COD, bKash, Nagad) — ensure they save correctly to orders
-- Add bank transfer option based on client's `paymentSettings`
-- Only show payment methods that the admin has enabled
-
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/operations/settings/page.tsx) *(if exists)*
-- Ensure admin can manage payment method settings (enable/disable bKash, Nagad, etc.)
-- These settings are already in the `Client.paymentSettings` type
+#### [MODIFY] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/products/[id]/edit/page.jsx)
+- Remove entire Reviews Management section (hide from admin)
 
 ---
 
-### Phase 3: Fix Auto-Refresh Problem (Issue #8)
+### Phase 3: Dynamic Logos (Admin + Storefront)
 
-**Root Cause**: `seedData()` is called on every mount of both `StorefrontLayout` (line 24) and `AdminLayout` (line 53). Since `seedData()` calls `storage.getClients()` which hits Firestore, and the check `if (clients.length > 0) return` still makes a read, this causes unnecessary API calls on every navigation.
+#### [NEW] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/orders/settings/page.jsx)
+**Actually, logo settings will go under Homepage editor or a new "Store Settings" in admin.**
+- Revised: Add logo settings to the existing Homepage editor page at `/admin/homepage`
+- Two logo slots: **Navbar Logo** and **Footer Logo**
+- Each slot: admin chooses **text** or **image** format
+  - Text: simple text input
+  - Image: file upload (via existing `/api/upload`)
+- Stored in Firestore at `clients/{clientId}/settings/branding`
 
-#### [MODIFY] [layout.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/%28storefront%29/layout.tsx)
-- Remove `seedData()` call from storefront layout — seed should only run from admin
-- Add a localStorage flag `data_seeded` to prevent re-running seed on every mount
+#### [MODIFY] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/homepage/page.jsx)
+- Add "Store Branding" section with navbar logo and footer logo configuration
 
-#### [MODIFY] [layout.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/layout.tsx)
-- Gate `seedData()` behind a localStorage check: only call if `data_seeded` flag is not set
-- After successful seed, set the flag
-
-#### [MODIFY] [seed.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/lib/seed.ts)
-- Add localStorage flag after seeding completes
-- This prevents the Firestore read on every page navigation
-
-#### All pages with `useEffect(() => { load(); }, [client])`:
-- Review all admin pages — the `load` pattern is fine (loads once on mount), but ensure no `setInterval` or polling exists
-- Remove any `window.addEventListener('focus', ...)` auto-refresh patterns if present
-
----
-
-### Phase 4: Client-Admin Data Synchronization (Issue #1)
-
-**Root Cause Analysis**: Both storefront and admin already read from the same Firestore database. The "disconnect" is likely because:
-1. Storefront uses `storage.getCartClientId()` to get the client ID, but this may not match the logged-in admin's client
-2. After admin makes changes, storefront doesn't refetch (no real-time listeners)
-3. The storefront config `storefrontConfig/default` document needs to be set to the admin's client ID
-
-#### [MODIFY] [seed.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/lib/seed.ts)
-- Ensure `storage.setCartClientId(cid)` is called during seeding (already done on line 118 ✓)
-
-#### [MODIFY] [layout.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/layout.tsx)
-- After admin login, ensure the storefront client ID is set to the admin's client ID
-- Add `storage.setCartClientId(client.id)` in the admin layout effect
-
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/%28storefront%29/page.tsx)
-- Ensure storefront fetches products fresh (no caching issues)
-- Products added via admin should appear immediately on storefront refresh
-
-#### [NEW] [useFirestoreListener.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/hooks/useFirestoreListener.ts)
-- Create a hook using Firestore `onSnapshot` for real-time listeners
-- Use on critical pages (admin dashboard, storefront products) so changes propagate instantly
-- This provides true bidirectional sync without polling
+#### [MODIFY] [layout.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/layout.jsx)
+- Fetch branding settings from Firestore on mount
+- Replace hardcoded "Demo Store" logo with dynamic text/image logo
+- Replace footer icon logo with dynamic text/image logo
 
 ---
 
-### Phase 5: Google OAuth Authentication (Issue #3)
+### Phase 4: Search Fix
 
-#### [MODIFY] [firebase.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/lib/firebase.ts)
-- Add `getAuth` import and export the `auth` instance
-- Add `GoogleAuthProvider` setup
+#### [MODIFY] [layout.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/layout.jsx)
+- Search already submits to `/products?q=...` — the form handler exists
+- Fix: Products page needs to read `q` param and filter by it
 
-#### [MODIFY] [useAuth.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/hooks/useAuth.ts)
-- Add `loginWithGoogle` method using `signInWithPopup`
-- On Google sign-in success, check if a Client document exists for that email
-  - If yes: log in to that client
-  - If no: create a new Client with Google profile data (name, email, photo)
-- Listen to Firebase Auth state changes with `onAuthStateChanged`
-- Maintain existing email/password login alongside Google OAuth
-
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/auth/login/page.tsx)
-- Add "Sign in with Google" button with Google logo
-- Styled as a prominent option (white button with Google colors)
-
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/auth/signup/page.tsx)
-- Add "Sign up with Google" button
-- Same flow — creates a new Client if one doesn't exist for that Google email
+#### [MODIFY] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/products/page.jsx)
+- Read `q` search param from URL
+- Apply search filter from URL query param (in addition to the local search input)
+- Remove the duplicate search input (navbar already has one)
+- Sync the navbar search with URL `q` param
 
 ---
 
-### Phase 6: Admin Dashboard Real Metrics & UI Contrast (Issues #5, #6)
+### Phase 5: Theme Consistency & New Pages
 
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/page.tsx)
-- **Remove hardcoded values**: Lines 91-92 have `3.2%` and `↑ 0.5%` hardcoded for conversion rate — calculate from actual data
-- Line 101 has `↑ 2.1%` hardcoded for cart abandonment change — calculate from real data
-- Calculate conversion rate: `(orders this month / total leads this month) × 100`
-- All metrics already pull from Firestore (lines 17-45 ✓) — just need to remove the fake static values
+All storefront pages must use the Etsy-inspired theme tokens (warm beige `#faf8f5` bg, `#312b36` dark text, `#f1641e` orange accent, Droid Sans font, etc.) instead of generic white/blue/gray Tailwind.
 
-#### [MODIFY] [globals.css](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/globals.css)
-- Improve text contrast globally
-- Change `text-gray-400` → `text-gray-600` for important labels
-- Change `text-gray-500` → `text-gray-700` for secondary text
-- Ensure all text on white backgrounds has at least 4.5:1 contrast ratio (WCAG AA)
+#### [MODIFY] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/account/page.jsx)
+- Restyle with storefront theme (warm colors, proper fonts, rounded cards)
+- Replace blue gradient header with theme-consistent design
+- Use `sf-` CSS classes and storefront design tokens
 
-#### Multiple admin pages — UI contrast fixes:
-- Replace `text-gray-400` with `text-gray-600` for readable content
-- Replace `text-gray-500` with `text-gray-700` for labels and secondary text  
-- Keep `text-gray-400` only for truly decorative/optional text
-- Ensure badge colors have sufficient contrast
+#### [MODIFY] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/account/orders/page.jsx)
+- Replace redirect with actual orders page
+- Full orders list with status badges, order details
+- Theme-consistent with homepage design
 
----
+#### [MODIFY] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/products/page.jsx)
+- Restyle with storefront theme
+- Remove search input (use navbar search)
+- Add proper loading state (skeleton/spinner before data loads)
+- Show "No products found" only AFTER data check
 
-### Phase 7: Fix Add Product Functionality (Issue #7)
+#### [NEW] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/wishlist/page.jsx)
+- New `/wishlist` page showing saved wishlist items
+- Grid of product cards with remove button
+- Theme-consistent design
+- Uses localStorage wishlist data
 
-**This is partially addressed by Phase 1** (focus loss fix). Additionally:
+#### [NEW] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/login/page.jsx)
+- Dedicated `/login` page (no popup)
+- Google Sign-In button with theme-consistent design
+- Redirects to account page on success
 
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/products/new/page.tsx)
-- The `save` function (line 49) looks correct — it calls `storage.addProduct()` which writes to Firestore
-- Verify the `Field` component is extracted outside the component (it's defined inline at line 70 — this causes remounts)
-- Move `Field` to shared components
-- Add image URL input field (instead of hardcoded `/placeholder-product.svg`)
-- Add success toast notification after save
-- Add error handling with user-visible error messages
+#### [NEW] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/signup/page.jsx)
+- Dedicated `/signup` page
+- Same as login (Google-only for now)
+- Theme-consistent design
 
----
+#### [MODIFY] [page.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/cart/page.jsx)
+- Restyle with storefront theme tokens
 
-### Phase 8: Lead Tracking System Enhancement (Issue #9)
-
-#### [NEW] [fingerprint.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/lib/fingerprint.ts)
-- Implement canvas fingerprinting (or FingerprintJS-lite) for anonymous user identification
-- Generate a stable fingerprint hash per browser
-- Store fingerprint → lead ID mapping in localStorage and Firestore
-
-#### [NEW] [useTracking.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/hooks/useTracking.ts)
-- Track page views, product views, time on page, click patterns
-- Detect cart abandonment (user has items in cart + leaves site)
-- Deduplicate: check fingerprint → find existing lead → update, don't create new
-- Assign "Window Shopper N" names to anonymous users
-- On user account creation, merge anonymous lead data into customer profile
-
-#### [MODIFY] [layout.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/%28storefront%29/layout.tsx)
-- Integrate `useTracking` hook to start tracking on every storefront page
-
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/customers/leads/page.tsx)
-- Add dashboard summary banner: "You have X hot leads and Y abandoned carts worth Z BDT"
-- Fix "Convert to Customer" button (line 30-34) — add proper error handling and ensure all lead data merges
-- Show browsing sequence (product viewed after product)
-- Add search queries tracking display
-- Show time spent on each product page
-
-#### [NEW] [api/tracking/route.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/api/tracking/route.ts)
-- API route to receive behavioral tracking data
-- Forward to MongoDB Atlas for storage
-- Handle deduplication server-side
+#### [MODIFY] [layout.jsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/layout.jsx)
+- Update navbar "Sign in" to link to `/login` instead of opening popup
+- Add "Wishlist" link to mobile nav and header
+- Update Favorites icon to link to `/wishlist`
 
 ---
 
-### Phase 9: Session Recording System (Issue #10)
+### Phase 6: Loading States & Mobile Responsiveness
 
-#### Install dependencies:
-```bash
-npm install rrweb rrweb-player mongodb
-npm install -D @types/rrweb @types/rrweb-player
-```
+#### [MODIFY] All storefront pages
+- Add proper loading states with themed skeleton screens
+- Show spinner/skeleton BEFORE data loads, not "no data" message
+- All pages mobile-first: single column layouts, proper touch targets, readable text sizes
 
-#### [NEW] [mongodb.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/lib/mongodb.ts)
-- MongoDB client singleton (server-side only)
-- Connection to MongoDB Atlas using connection string from `.env.local`
-
-#### [NEW] [useSessionRecorder.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/hooks/useSessionRecorder.ts)
-- Initialize rrweb `record()` on storefront mount
-- Buffer events and send to API route in batches (every 10 seconds or 100 events)
-- Link recording to user/lead ID from fingerprinting
-- Stop recording on page unload (use `beforeunload` + `sendBeacon`)
-
-#### [NEW] [api/sessions/route.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/api/sessions/route.ts)
-- POST: Receive session events, store in MongoDB `sessions` collection
-- GET: Retrieve sessions for admin playback (with pagination)
-- DELETE: Auto-purge sessions older than 30 days
-- Document structure: `{ userId, fingerprintId, timestamp, duration, events[], pageViews[], device, browser }`
-
-#### [NEW] [api/sessions/[id]/route.ts](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/api/sessions/[id]/route.ts)
-- GET: Retrieve a single session's full event data for playback
-
-#### [MODIFY] [page.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/admin/customers/sessions/page.tsx)
-- Replace placeholder session viewer with rrweb-player
-- Fetch sessions from MongoDB API route instead of from Firestore leads
-- Add session metadata display (duration, pages, device, browser)
-- Add pagination and filtering by user/date
-- Show all sessions grouped by user identity (deduplication)
-
-#### [MODIFY] [layout.tsx](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/%28storefront%29/layout.tsx)
-- Integrate `useSessionRecorder` hook to auto-record all storefront sessions
-
----
-
-## Summary of Files Changed
-
-| Phase | Files Modified | Files Created |
-|-------|---------------|---------------|
-| 1 | 3 admin page.tsx files | 1 shared Field component |
-| 2 | checkout page.tsx | — |
-| 3 | 2 layout.tsx, seed.ts | — |
-| 4 | admin layout, storefront page | useFirestoreListener.ts |
-| 5 | firebase.ts, useAuth.ts, login, signup | — |
-| 6 | admin dashboard, globals.css, ~10 pages | — |
-| 7 | products/new/page.tsx | — |
-| 8 | leads page.tsx, storefront layout | fingerprint.ts, useTracking.ts, api/tracking |
-| 9 | sessions page.tsx, storefront layout | mongodb.ts, useSessionRecorder.ts, api/sessions |
+#### [MODIFY] [storefront-layout.css](file:///c:/Users/User/Downloads/antigravity/ecommerce-platform/app/(storefront)/storefront-layout.css)
+- Enhanced mobile breakpoints
+- Better touch targets for mobile
+- Proper spacing on small screens
 
 ---
 
 ## Verification Plan
 
 ### Automated Tests
-1. `npm run build` — verify no TypeScript/compilation errors after all changes
-2. Browser test: navigate to admin → verify inputs don't lose focus
-3. Browser test: add a product via admin → verify it appears on storefront
-4. Browser test: navigate to checkout with items in cart → verify no redirect
-5. Browser test: click "Sign in with Google" → verify OAuth popup
+- `npm run build` — verify no build errors after all changes
+- Browser testing of all affected pages:
+  - `/cart` — verify no city field, shipping from admin
+  - `/products/[id]` — verify no fake discount, no reviews, no timer, proper gallery
+  - `/products` — verify no search input, proper loading state
+  - `/wishlist` — verify new page works
+  - `/login`, `/signup` — verify new pages work
+  - `/account`, `/account/orders` — verify theme consistency
+  - `/admin/orders/shipping` — verify shipping config
+  - `/admin/homepage` — verify logo settings
+  - Navbar search — verify it navigates to products with query
 
-### Manual Verification
-1. **Data sync**: Add product in admin → refresh storefront → product appears
-2. **Checkout**: Add items to cart → go to checkout → complete order → verify order appears in admin
-3. **Auth**: Sign in with Google → verify client created → verify admin access
-4. **Dashboard**: Verify all metrics match actual database counts
-5. **Lead tracking**: Visit storefront anonymously → check lead tracker → verify visit recorded
-6. **Sessions**: Visit storefront → go to admin sessions → play back the session
-7. **Contrast**: Visually verify all text is readable (no light gray on white)
+### Manual Verification  
+- Test on mobile viewport (375px width) for all pages
+- Verify wishlist save/remove across product details and "you may also like"
+- Verify shipping cost calculation in cart (per-item × quantity)

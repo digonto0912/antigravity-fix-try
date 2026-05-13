@@ -4,9 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { storage } from '@/lib/storage';
 import { generateSlug } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { generateId } from '@/lib/utils';
-
-const REVIEW_CATEGORIES = ['Appearance', 'Quality', 'Delivery & Packaging', 'Description accuracy', 'Customer service', 'General'];
+import { generateId, formatCurrency } from '@/lib/utils';
 
 export default function EditProductPage({ params }) {
   const { id } = use(params);
@@ -15,13 +13,8 @@ export default function EditProductPage({ params }) {
   const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-  const [form, setForm] = useState({ name: '', sku: '', description: '', category: '', basePrice: '', salePrice: '', inventory: '0', lowStockThreshold: '10', purchasePrice: '', location: '', slug: '', metaDescription: '', status: 'active' });
+  const [form, setForm] = useState({ name: '', sku: '', description: '', category: '', basePrice: '', discountPercent: '', inventory: '0', lowStockThreshold: '10', purchasePrice: '', location: '', slug: '', metaDescription: '', status: 'active' });
   const [variants, setVariants] = useState([]);
-
-  // Reviews state
-  const [reviews, setReviews] = useState([]);
-  const [reviewForm, setReviewForm] = useState({ username: '', date: '', text: '', stars: '5', category: 'General' });
-  const [addingReview, setAddingReview] = useState(false);
 
   useEffect(() => {
     if (!client) return;
@@ -29,12 +22,14 @@ export default function EditProductPage({ params }) {
       setCategories(await storage.getCategories(client.id));
       const p = await storage.getProduct(client.id, id);
       if (p) {
-        setForm({ name: p.name, sku: p.sku, description: p.description, category: p.category, basePrice: String(p.basePrice), salePrice: p.salePrice ? String(p.salePrice) : '', inventory: String(p.inventory), lowStockThreshold: String(p.lowStockThreshold), purchasePrice: p.purchasePrice ? String(p.purchasePrice) : '', location: p.location || '', slug: p.slug, metaDescription: p.metaDescription || '', status: p.status });
+        // Calculate discount percent from basePrice and salePrice
+        let discPct = '';
+        if (p.salePrice && p.salePrice < p.basePrice) {
+          discPct = String(Math.round(((p.basePrice - p.salePrice) / p.basePrice) * 100));
+        }
+        setForm({ name: p.name, sku: p.sku, description: p.description, category: p.category, basePrice: String(p.basePrice), discountPercent: discPct, inventory: String(p.inventory), lowStockThreshold: String(p.lowStockThreshold), purchasePrice: p.purchasePrice ? String(p.purchasePrice) : '', location: p.location || '', slug: p.slug, metaDescription: p.metaDescription || '', status: p.status });
         setVariants(p.variants);
       }
-      // Load reviews for this product
-      const allReviews = await storage.getReviews(client.id);
-      setReviews(allReviews.filter(r => r.productId === id));
     };
     init();
   }, [client, id]);
@@ -44,11 +39,16 @@ export default function EditProductPage({ params }) {
   const addOption = (idx, opt) => { if (!opt.trim()) return; const v = [...variants]; v[idx].options.push(opt.trim()); setVariants(v); };
   const removeOption = (vi, oi) => { const v = [...variants]; v[vi].options.splice(oi, 1); setVariants(v); };
 
+  // Calculate final price from base price and discount
+  const baseNum = Number(form.basePrice) || 0;
+  const discNum = Number(form.discountPercent) || 0;
+  const finalPrice = discNum > 0 ? Math.round(baseNum * (1 - discNum / 100)) : baseNum;
+
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = 'Required';
-    if (!form.basePrice || Number(form.basePrice) <= 0) e.basePrice = 'Must be > 0';
-    if (form.salePrice && Number(form.salePrice) >= Number(form.basePrice)) e.salePrice = 'Must be less';
+    if (!form.basePrice || baseNum <= 0) e.basePrice = 'Must be > 0';
+    if (discNum < 0 || discNum >= 100) e.discountPercent = 'Must be 0-99%';
     if (!form.category) e.category = 'Required';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -57,46 +57,15 @@ export default function EditProductPage({ params }) {
   const save = async () => {
     if (!client || !validate()) return;
     setSaving(true);
+    const salePrice = discNum > 0 ? finalPrice : undefined;
     await storage.updateProduct(client.id, id, {
       name: form.name.trim(), sku: form.sku, description: form.description, category: form.category,
-      basePrice: Number(form.basePrice), salePrice: form.salePrice ? Number(form.salePrice) : undefined,
+      basePrice: baseNum, salePrice,
       variants, inventory: Number(form.inventory), lowStockThreshold: Number(form.lowStockThreshold),
       purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : undefined, location: form.location,
       slug: form.slug || generateSlug(form.name), metaDescription: form.metaDescription, status: form.status,
     });
     router.push('/admin/products');
-  };
-
-  const handleAddReview = async () => {
-    if (!client || !reviewForm.username.trim() || !reviewForm.text.trim()) return;
-    setAddingReview(true);
-    const review = {
-      id: generateId(),
-      clientId: client.id,
-      productId: id,
-      username: reviewForm.username.trim(),
-      date: reviewForm.date
-        ? new Date(reviewForm.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-        : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      text: reviewForm.text.trim(),
-      stars: Number(reviewForm.stars),
-      category: reviewForm.category,
-      createdAt: new Date().toISOString(),
-    };
-    await storage.addReview(client.id, review);
-    setReviews(prev => [...prev, review]);
-    setReviewForm({ username: '', date: '', text: '', stars: '5', category: 'General' });
-    setAddingReview(false);
-  };
-
-  const handleDeleteReview = async (reviewId) => {
-    if (!client) return;
-    try {
-      const allReviews = await storage.getReviews(client.id);
-      const filtered = allReviews.filter(r => r.id !== reviewId);
-      await storage.saveReviews(client.id, filtered);
-      setReviews(prev => prev.filter(r => r.id !== reviewId));
-    } catch (err) { console.error('Delete review error:', err); }
   };
 
   const F = ({ label, error, children }) => (
@@ -117,13 +86,31 @@ export default function EditProductPage({ params }) {
         <F label="Category *" error={errors.category}><select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="">Select</option>{categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select></F>
       </div>
 
+      {/* Simplified Pricing: Price → Discount % → Final Price */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h2 className="font-semibold">Pricing</h2>
-        <div className="grid md:grid-cols-3 gap-4">
-          <F label="Base Price *" error={errors.basePrice}><input type="number" value={form.basePrice} onChange={e => setForm({ ...form, basePrice: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></F>
-          <F label="Sale Price" error={errors.salePrice}><input type="number" value={form.salePrice} onChange={e => setForm({ ...form, salePrice: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></F>
-          <F label="Purchase Price"><input type="number" value={form.purchasePrice} onChange={e => setForm({ ...form, purchasePrice: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></F>
+        <div className="grid md:grid-cols-3 gap-4 items-end">
+          <F label="Price *" error={errors.basePrice}>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">৳</span>
+              <input type="number" value={form.basePrice} onChange={e => setForm({ ...form, basePrice: e.target.value })} className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+          </F>
+          <F label="Discount %" error={errors.discountPercent}>
+            <div className="relative">
+              <input type="number" min="0" max="99" value={form.discountPercent} onChange={e => setForm({ ...form, discountPercent: e.target.value })} placeholder="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
+            </div>
+          </F>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Final Price</label>
+            <div className="flex items-center gap-2 h-[38px] px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+              <span className="text-lg font-bold text-green-600">{formatCurrency(finalPrice)}</span>
+              {discNum > 0 && <span className="text-xs text-gray-400 line-through">{formatCurrency(baseNum)}</span>}
+            </div>
+          </div>
         </div>
+        <F label="Purchase Price (cost)"><input type="number" value={form.purchasePrice} onChange={e => setForm({ ...form, purchasePrice: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none max-w-xs" /></F>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
@@ -148,55 +135,6 @@ export default function EditProductPage({ params }) {
           <F label="Slug"><input value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" /></F>
           <F label="Status"><div className="flex gap-4 mt-1">{(['active','hidden','archived']).map(s => <label key={s} className="flex items-center gap-1 text-sm"><input type="radio" checked={form.status===s} onChange={()=>setForm({...form,status:s})} />{s}</label>)}</div></F>
         </div>
-      </div>
-
-      {/* ===== REVIEWS MANAGEMENT ===== */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <h2 className="font-semibold">Product Reviews ({reviews.length})</h2>
-
-        {/* Add review form */}
-        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-          <h3 className="text-sm font-medium text-gray-700">Add a Review</h3>
-          <div className="grid md:grid-cols-3 gap-3">
-            <input value={reviewForm.username} onChange={e => setReviewForm({ ...reviewForm, username: e.target.value })} placeholder="Username" className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-            <input type="date" value={reviewForm.date} onChange={e => setReviewForm({ ...reviewForm, date: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-            <div className="flex gap-2">
-              <select value={reviewForm.stars} onChange={e => setReviewForm({ ...reviewForm, stars: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex-1">
-                {[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n} ★</option>)}
-              </select>
-              <select value={reviewForm.category} onChange={e => setReviewForm({ ...reviewForm, category: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex-1">
-                {REVIEW_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-          </div>
-          <textarea value={reviewForm.text} onChange={e => setReviewForm({ ...reviewForm, text: e.target.value })} placeholder="Review text..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          <button onClick={handleAddReview} disabled={addingReview || !reviewForm.username.trim() || !reviewForm.text.trim()} className="px-4 py-2 text-sm text-white bg-green-500 rounded-lg hover:bg-green-600 disabled:opacity-50">
-            {addingReview ? 'Adding...' : '+ Add Review'}
-          </button>
-        </div>
-
-        {/* Existing reviews list */}
-        {reviews.length > 0 && (
-          <div className="space-y-2">
-            {reviews.map(r => (
-              <div key={r.id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="font-medium">{r.username}</span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-yellow-500">{'★'.repeat(r.stars)}{'☆'.repeat(5 - r.stars)}</span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-500 text-xs">{r.category}</span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-400 text-xs">{r.date}</span>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{r.text}</p>
-                </div>
-                <button onClick={() => handleDeleteReview(r.id)} className="text-red-500 text-xs ml-3 hover:underline flex-shrink-0">Delete</button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="flex gap-3 justify-end">

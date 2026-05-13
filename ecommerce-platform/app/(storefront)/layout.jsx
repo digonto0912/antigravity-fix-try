@@ -11,9 +11,10 @@ import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { useTracking } from '@/hooks/useTracking';
 import { useSessionRecorder } from '@/hooks/useSessionRecorder';
 import ToastContainer from '@/components/shared/Toast';
-import CustomerAuthModal from '@/components/storefront/CustomerAuthModal';
 import Chatbot from '@/components/storefront/Chatbot';
 import './storefront-layout.css';
+import './storefront-pages.css';
+import './storefront-pages-2.css';
 
 
 
@@ -22,29 +23,34 @@ export default function StorefrontLayout({ children }) {
   const router = useRouter();
   const { itemCount } = useCart();
   const { toasts, removeToast } = useToast();
-  const { customer, loginWithGoogle, logout, showLoginModal, setShowLoginModal } = useCustomerAuth();
+  const { customer, logout } = useCustomerAuth();
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [navCategories, setNavCategories] = useState([]);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneSaved, setPhoneSaved] = useState(false);
+  const [branding, setBranding] = useState(null);
   const dropdownRef = useRef(null);
 
   useTracking();
   useSessionRecorder();
 
   useEffect(() => {
-    const fetchCats = async () => {
+    const fetchData = async () => {
       const cid = await storage.getCartClientId();
       if (!cid) return;
-      const cats = await storage.getCategories(cid);
+      const [cats, brandingData] = await Promise.all([
+        storage.getCategories(cid),
+        storage.getSettings(cid, 'branding'),
+      ]);
       setNavCategories(cats.sort((a, b) => a.displayOrder - b.displayOrder));
+      if (brandingData) setBranding(brandingData);
     };
-    fetchCats();
+    fetchData();
   }, []);
-
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -56,11 +62,29 @@ export default function StorefrontLayout({ children }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  useEffect(() => { setMobileMenu(false); }, [pathname]);
+  useEffect(() => { setMobileMenu(false); setMobileSearchOpen(false); }, [pathname]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) router.push(`/products?q=${encodeURIComponent(searchQuery.trim())}`);
+    if (searchQuery.trim()) {
+      router.push(`/products?q=${encodeURIComponent(searchQuery.trim())}`);
+      setMobileSearchOpen(false);
+    }
+  };
+
+  // Render logo (text or image)
+  const renderNavbarLogo = () => {
+    if (branding?.navbarLogoType === 'image' && branding.navbarLogoImage) {
+      return <img src={branding.navbarLogoImage} alt="Store" className="sf-header__logo-img" />;
+    }
+    return branding?.navbarLogoText || 'Store';
+  };
+
+  const renderFooterLogo = () => {
+    if (branding?.footerLogoType === 'image' && branding.footerLogoImage) {
+      return <img src={branding.footerLogoImage} alt="Store" className="sf-footer-app__logo-img" />;
+    }
+    return <span className="sf-footer-app__logo-text">{branding?.footerLogoText || '🛍️'}</span>;
   };
 
   return (
@@ -80,12 +104,12 @@ export default function StorefrontLayout({ children }) {
             <span /><span /><span />
           </button>
 
-          {/* Logo */}
+          {/* Logo — dynamic from admin */}
           <Link href="/" className="sf-header__logo" aria-label="Homepage">
-            Demo Store
+            {renderNavbarLogo()}
           </Link>
 
-          {/* Search bar */}
+          {/* Search bar — hidden on mobile, shown on desktop */}
           <form className="sf-header__search" role="search" onSubmit={handleSearch}>
             <label htmlFor="sf-search" className="sr-only" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
               Search for anything
@@ -106,6 +130,11 @@ export default function StorefrontLayout({ children }) {
 
           {/* Actions */}
           <nav className="sf-header__actions" aria-label="User actions">
+
+            {/* Mobile search icon */}
+            <button className="sf-header__mobile-search-btn" onClick={() => setMobileSearchOpen(!mobileSearchOpen)} aria-label="Search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+            </button>
 
             {/* Sign in / Profile */}
             {customer ? (
@@ -138,6 +167,10 @@ export default function StorefrontLayout({ children }) {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /></svg>
                       My Orders
                     </Link>
+                    <Link href="/wishlist" onClick={() => setProfileDropdown(false)} className="sf-header__dropdown-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+                      Wishlist
+                    </Link>
                     <div className="sf-header__dropdown-divider" />
                     <button onClick={() => { logout(); setProfileDropdown(false); }} className="sf-header__dropdown-item sf-header__dropdown-item--danger">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
@@ -147,13 +180,13 @@ export default function StorefrontLayout({ children }) {
                 )}
               </div>
             ) : (
-              <button className="sf-header__sign-in" onClick={() => setShowLoginModal(true)}>
+              <Link href="/login" className="sf-header__sign-in">
                 Sign in
-              </button>
+              </Link>
             )}
 
-            {/* Favorites */}
-            <Link href="/products" className="sf-header__icon" aria-label="Favorites">
+            {/* Favorites / Wishlist */}
+            <Link href="/wishlist" className="sf-header__icon" aria-label="Wishlist">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
             </Link>
 
@@ -165,6 +198,24 @@ export default function StorefrontLayout({ children }) {
 
           </nav>
         </div>
+
+        {/* Mobile search bar — slides down */}
+        {mobileSearchOpen && (
+          <div className="sf-header__mobile-search">
+            <form onSubmit={handleSearch} className="sf-header__mobile-search-form">
+              <input
+                type="search"
+                placeholder="Search for anything"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                autoFocus
+              />
+              <button type="submit" aria-label="Search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+              </button>
+            </form>
+          </div>
+        )}
       </header>
 
       {/* Mobile Navigation Overlay */}
@@ -177,6 +228,7 @@ export default function StorefrontLayout({ children }) {
               <Link href={`/products?cat=${encodeURIComponent(cat.name)}`}>{cat.name}</Link>
             </li>
           ))}
+          <li className="sf-mobile-nav__item"><Link href="/wishlist">♡ Wishlist</Link></li>
           {customer ? (
             <>
               <li className="sf-mobile-nav__item"><Link href="/account">My Account</Link></li>
@@ -186,9 +238,10 @@ export default function StorefrontLayout({ children }) {
               </li>
             </>
           ) : (
-            <li className="sf-mobile-nav__item">
-              <a href="#" onClick={e => { e.preventDefault(); setMobileMenu(false); setShowLoginModal(true); }}>Sign In</a>
-            </li>
+            <>
+              <li className="sf-mobile-nav__item"><Link href="/login">Sign In</Link></li>
+              <li className="sf-mobile-nav__item"><Link href="/signup">Create Account</Link></li>
+            </>
           )}
         </ul>
       </nav>
@@ -226,12 +279,10 @@ export default function StorefrontLayout({ children }) {
               const cid = await storage.getCartClientId();
               if (!cid) return;
               if (customer) {
-                // Logged in customer — update their customer record
                 const customers = await storage.getCustomers(cid);
                 const found = customers.find(c => c.email === customer.email);
                 if (found) await storage.updateCustomer(cid, found.id, { phone: phoneNumber.trim() });
               } else {
-                // Anonymous visitor — update their lead record
                 const visitor = getVisitorId();
                 const leads = await storage.getLeads(cid);
                 const lead = leads.find(l => l.sessionId === visitor.fingerprintId);
@@ -250,65 +301,40 @@ export default function StorefrontLayout({ children }) {
           </form>
         </div>
 
-        {/* Renewable energy banner */}
-        <div className="sf-renewable">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z" /></svg>
-          <span className="sf-renewable__text">Etsy is powered by 100% renewable electricity.</span>
-        </div>
-
         {/* Footer columns */}
         <div className="sf-footer-content">
-          <aside className="sf-footer-app" aria-label="Download app">
-            <div className="sf-footer-app__icon">🛍️</div>
-            <Link href="#" className="sf-footer-app__btn">Download the Etsy App</Link>
+          <aside className="sf-footer-app" aria-label="Store info">
+            <div className="sf-footer-app__icon">{renderFooterLogo()}</div>
           </aside>
 
           <nav className="sf-footer-nav" aria-label="Footer navigation">
             <div>
               <h3 className="sf-footer-col__heading">Shop</h3>
               <ul className="sf-footer-col__list">
-                <li className="sf-footer-col__item"><Link href="#">Gift cards</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Etsy Registry</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Sitemap</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Etsy blog</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Etsy United Kingdom</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Etsy Germany</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Etsy Canada</Link></li>
+                <li className="sf-footer-col__item"><Link href="/products">All Products</Link></li>
+                {navCategories.slice(0, 5).map(cat => (
+                  <li key={cat.id} className="sf-footer-col__item"><Link href={`/products?cat=${encodeURIComponent(cat.name)}`}>{cat.name}</Link></li>
+                ))}
               </ul>
             </div>
             <div>
-              <h3 className="sf-footer-col__heading">Sell</h3>
+              <h3 className="sf-footer-col__heading">Account</h3>
               <ul className="sf-footer-col__list">
-                <li className="sf-footer-col__item"><Link href="#">Sell on Etsy</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Teams</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Forums</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Affiliates &amp; Creators</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="sf-footer-col__heading">About</h3>
-              <ul className="sf-footer-col__list">
-                <li className="sf-footer-col__item"><Link href="#">Etsy, Inc.</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Policies</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Investors</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Careers</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Press</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Impact</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Legal imprint</Link></li>
+                <li className="sf-footer-col__item"><Link href="/login">Sign In</Link></li>
+                <li className="sf-footer-col__item"><Link href="/signup">Create Account</Link></li>
+                <li className="sf-footer-col__item"><Link href="/account">My Account</Link></li>
+                <li className="sf-footer-col__item"><Link href="/account/orders">My Orders</Link></li>
+                <li className="sf-footer-col__item"><Link href="/wishlist">Wishlist</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="sf-footer-col__heading">Help</h3>
               <ul className="sf-footer-col__list">
-                <li className="sf-footer-col__item"><Link href="#">Help Center</Link></li>
-                <li className="sf-footer-col__item"><Link href="#">Privacy settings</Link></li>
+                <li className="sf-footer-col__item"><Link href="#">Contact Us</Link></li>
+                <li className="sf-footer-col__item"><Link href="#">Shipping Info</Link></li>
+                <li className="sf-footer-col__item"><Link href="#">Returns</Link></li>
+                <li className="sf-footer-col__item"><Link href="#">FAQ</Link></li>
               </ul>
-              <div className="sf-footer-social" aria-label="Social media links">
-                <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="5" /><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" /></svg></a>
-                <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg></a>
-                <a href="#" aria-label="Pinterest"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0a12 12 0 0 0-4.37 23.17c-.07-.94-.13-2.4.03-3.44l1.14-4.86s-.29-.58-.29-1.44c0-1.35.78-2.36 1.76-2.36.83 0 1.23.62 1.23 1.37 0 .84-.53 2.09-.81 3.25-.23.97.49 1.76 1.45 1.76 1.74 0 3.07-1.83 3.07-4.48 0-2.34-1.68-3.98-4.08-3.98-2.78 0-4.41 2.08-4.41 4.24 0 .84.32 1.74.73 2.23.08.1.09.18.07.28l-.27 1.11c-.04.18-.15.22-.34.13-1.26-.59-2.05-2.42-2.05-3.9 0-3.17 2.3-6.08 6.65-6.08 3.49 0 6.2 2.49 6.2 5.81 0 3.47-2.19 6.26-5.22 6.26-1.02 0-1.98-.53-2.31-1.16l-.63 2.4c-.23.88-.84 1.98-1.26 2.65A12 12 0 1 0 12 0z" /></svg></a>
-                <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.38.55A3.02 3.02 0 0 0 .5 6.19 31.75 31.75 0 0 0 0 12a31.75 31.75 0 0 0 .5 5.81 3.02 3.02 0 0 0 2.12 2.14c1.88.55 9.38.55 9.38.55s7.5 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14A31.75 31.75 0 0 0 24 12a31.75 31.75 0 0 0-.5-5.81zM9.75 15.02V8.98L15.5 12l-5.75 3.02z" /></svg></a>
-              </div>
             </div>
           </nav>
         </div>
@@ -318,27 +344,19 @@ export default function StorefrontLayout({ children }) {
           <div className="sf-footer-bottom__inner">
             <div className="sf-footer-bottom__region">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
-              Bangladesh &nbsp;|&nbsp; English (US) &nbsp;|&nbsp; $ (USD)
+              Bangladesh &nbsp;|&nbsp; English (US) &nbsp;|&nbsp; ৳ (BDT)
             </div>
-            <span className="sf-footer-bottom__copyright">© 2026 Etsy, Inc.</span>
+            <span className="sf-footer-bottom__copyright">© {new Date().getFullYear()}</span>
             <nav className="sf-footer-bottom__links" aria-label="Legal links">
               <a href="#" className="sf-footer-bottom__link">Terms of Use</a>
               <a href="#" className="sf-footer-bottom__link">Privacy</a>
-              <a href="#" className="sf-footer-bottom__link">Interest-based ads</a>
-              <a href="#" className="sf-footer-bottom__link">Local Shops</a>
-              <a href="#" className="sf-footer-bottom__link">Regions</a>
             </nav>
           </div>
         </div>
 
       </footer>
 
-      {/* Modals & Overlays */}
-      <CustomerAuthModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onGoogleLogin={loginWithGoogle}
-      />
+      {/* Overlays */}
       <Chatbot />
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

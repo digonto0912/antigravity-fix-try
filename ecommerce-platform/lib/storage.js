@@ -199,6 +199,14 @@ export const storage = {
     await setDoc(doc(db, `clients/${clientId}/spinWheel`, sid), { discountData: null }, { merge: true });
   },
 
+  getSettings: async (clientId, key) => {
+    const snap = await getDoc(doc(db, `clients/${clientId}/settings`, key));
+    return snap.exists() ? snap.data() : null;
+  },
+  saveSettings: async (clientId, key, data) => {
+    await setDoc(doc(db, `clients/${clientId}/settings`, key), { ...data, updatedAt: new Date().toISOString() });
+  },
+
   getHomepageHero: async (clientId) => {
     const snap = await getDoc(doc(db, `clients/${clientId}/homepage`, 'hero'));
     return snap.exists() ? snap.data() : null;
