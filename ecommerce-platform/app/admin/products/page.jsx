@@ -111,7 +111,7 @@ export default function ProductsPage() {
               {filtered.map(p => (
                 <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="px-4 py-3"><input type="checkbox" checked={selected.has(p.id)} onChange={() => { const n = new Set(selected); n.has(p.id) ? n.delete(p.id) : n.add(p.id); setSelected(n); }} /></td>
-                  <td className="px-4 py-3"><div className="flex items-center gap-3"><div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-lg">🛍️</div><span className="font-medium text-gray-900">{p.name}</span></div></td>
+                  <td className="px-4 py-3"><div className="flex items-center gap-3">{p.images && p.images.length > 0 && p.images[0] !== '/placeholder-product.svg' ? <img src={p.images[0]} alt={p.name} className="w-10 h-10 rounded-lg object-cover" /> : <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-lg">🛍️</div>}<span className="font-medium text-gray-900">{p.name}</span></div></td>
                   <td className="px-4 py-3 text-gray-500">{p.sku}</td>
                   <td className="px-4 py-3 text-gray-500">{p.category}</td>
                   <td className="px-4 py-3">{p.salePrice ? (<><span className="line-through text-gray-400 mr-1">{formatCurrency(p.basePrice)}</span><span className="text-green-600 font-medium">{formatCurrency(p.salePrice)}</span></>) : formatCurrency(p.basePrice)}</td>

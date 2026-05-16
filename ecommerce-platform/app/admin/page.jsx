@@ -106,23 +106,26 @@ export default function DashboardPage() {
         {/* Revenue Chart (CSS-based bar chart) */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="font-semibold text-gray-900 mb-4">Revenue Trend (Last 7 Days)</h3>
-          <div className="flex items-end gap-2 h-40">
-            {Array.from({ length: 7 }, (_, i) => {
-              const date = new Date(Date.now() - (6 - i) * 86400000);
-              const dayOrders = orders.filter(o => { const d = new Date(o.createdAt); return d.toDateString() === date.toDateString(); });
-              const rev = dayOrders.reduce((s, o) => s + o.total, 0);
-              const maxRev = Math.max(...Array.from({ length: 7 }, (_, j) => orders.filter(o => new Date(o.createdAt).toDateString() === new Date(Date.now() - (6 - j) * 86400000).toDateString()).reduce((s, o) => s + o.total, 0)), 1);
-              const h = Math.max((rev / maxRev) * 100, 4);
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="text-xs text-gray-500">{formatCurrency(rev)}</div>
-                  <div className="w-full bg-blue-100 rounded-t-md relative" style={{ height: `${h}%` }}>
-                    <div className="absolute inset-0 bg-blue-500 rounded-t-md opacity-80 hover:opacity-100 transition-opacity" />
+          <div className="flex items-end gap-2" style={{ height: '160px' }}>
+            {(() => {
+              const days = Array.from({ length: 7 }, (_, i) => {
+                const date = new Date(Date.now() - (6 - i) * 86400000);
+                const dayOrders = orders.filter(o => { const d = new Date(o.createdAt); return d.toDateString() === date.toDateString(); });
+                const rev = dayOrders.reduce((s, o) => s + o.total, 0);
+                return { date, rev };
+              });
+              const maxRev = Math.max(...days.map(d => d.rev), 1);
+              return days.map((d, i) => {
+                const barH = Math.max((d.rev / maxRev) * 120, 6);
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center justify-end" style={{ height: '100%' }}>
+                    <div className="text-xs text-gray-500 mb-1">{formatCurrency(d.rev)}</div>
+                    <div className="w-full rounded-t-md bg-blue-500 opacity-80 hover:opacity-100 transition-all" style={{ height: `${barH}px`, minHeight: '6px' }} />
+                    <div className="text-xs text-gray-400 mt-1">{d.date.toLocaleDateString('en', { weekday: 'short' })}</div>
                   </div>
-                  <div className="text-xs text-gray-400">{date.toLocaleDateString('en', { weekday: 'short' })}</div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         </div>
 

@@ -1,15 +1,15 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { storage } from '@/lib/storage';
-import { generateId, generateSKU, generateSlug } from '@/lib/utils';
+import { generateId, generateSKU, generateSlug, formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import FormField from '@/components/shared/FormField';
 
 const INITIAL_FORM = {
-  name: '', sku: '', description: '', category: '', basePrice: '', salePrice: '',
-  inventory: '0', lowStockThreshold: '10', purchasePrice: '', location: '',
-  slug: '', metaDescription: '', status: 'active', imageUrls: '',
+  name: '', description: '', category: '', basePrice: '', discountPercent: '',
+  inventory: '0', lowStockThreshold: '10', purchasePrice: '',
+  status: 'active', imageUrls: '',
 };
 
 export default function NewProductPage() {
@@ -35,15 +35,6 @@ export default function NewProductPage() {
   // Use a stable updater to prevent re-render cascades
   const updateField = useCallback((field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
-  }, []);
-
-  // Generate SKU/slug on blur, NOT on every keystroke
-  const handleNameBlur = useCallback(() => {
-    setForm(prev => ({
-      ...prev,
-      sku: prev.sku || generateSKU(prev.name),
-      slug: generateSlug(prev.name),
-    }));
   }, []);
 
   const addVariant = useCallback(() => {
@@ -119,10 +110,6 @@ export default function NewProductPage() {
       const data = await res.json();
       if (data.url) {
         setImagePreview(prev => [...prev, data.url]);
-        setForm(prev => ({
-          ...prev,
-          imageUrls: prev.imageUrls ? prev.imageUrls + '\n' + data.url : data.url,
-        }));
       }
     } catch (err) {
       console.error('Upload failed:', err);
@@ -132,48 +119,50 @@ export default function NewProductPage() {
 
   const removeImage = useCallback((idx) => {
     setImagePreview(prev => prev.filter((_, i) => i !== idx));
-    setForm(prev => {
-      const urls = prev.imageUrls.split('\n').filter(u => u.trim());
-      urls.splice(idx, 1);
-      return { ...prev, imageUrls: urls.join('\n') };
-    });
   }, []);
+
+  // Calculate final price from base price and discount
+  const baseNum = Number(form.basePrice) || 0;
+  const discNum = Number(form.discountPercent) || 0;
+  const finalPrice = discNum > 0 ? Math.round(baseNum * (1 - discNum / 100)) : baseNum;
 
   const validate = useCallback(() => {
     const e = {};
     if (!form.name.trim()) e.name = 'Required';
     if (!form.basePrice || Number(form.basePrice) <= 0) e.basePrice = 'Must be > 0';
-    if (form.salePrice && Number(form.salePrice) >= Number(form.basePrice)) e.salePrice = 'Must be less than base price';
+    if (discNum < 0 || discNum >= 100) e.discountPercent = 'Must be 0-99%';
     if (!form.category) e.category = 'Required';
     setErrors(e);
     return Object.keys(e).length === 0;
-  }, [form.name, form.basePrice, form.salePrice, form.category]);
+  }, [form.name, form.basePrice, form.category, discNum]);
 
   const save = useCallback(async (addAnother) => {
     if (!client || !validate()) return;
     setSaving(true);
     try {
       const now = new Date().toISOString();
-      const images = form.imageUrls
-        ? form.imageUrls.split('\n').filter(u => u.trim())
+      const images = imagePreview.length > 0
+        ? imagePreview
         : ['/placeholder-product.svg'];
+
+      const salePrice = discNum > 0 ? finalPrice : null;
 
       const product = {
         id: generateId(), clientId: client.id,
         name: form.name.trim(),
-        sku: form.sku || generateSKU(form.name),
+        sku: generateSKU(form.name),
         description: form.description,
         category: form.category,
         basePrice: Number(form.basePrice),
-        salePrice: form.salePrice ? Number(form.salePrice) : null,
+        salePrice,
         images,
         variants,
         inventory: Number(form.inventory) || 0,
         lowStockThreshold: Number(form.lowStockThreshold) || 10,
         purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : null,
-        location: form.location || '',
-        slug: form.slug || generateSlug(form.name),
-        metaDescription: form.metaDescription || '',
+        location: '',
+        slug: generateSlug(form.name),
+        metaDescription: '',
         status: form.status,
         views: 0, addToCartCount: 0, purchaseCount: 0,
         createdAt: now, updatedAt: now,
@@ -194,7 +183,7 @@ export default function NewProductPage() {
       setErrors({ save: 'Failed to save product. Please try again.' });
     }
     setSaving(false);
-  }, [client, form, variants, validate, router]);
+  }, [client, form, variants, imagePreview, validate, router, discNum, finalPrice]);
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -209,19 +198,13 @@ export default function NewProductPage() {
       {/* Basic Info */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h2 className="font-semibold text-gray-900">Basic Information</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <FormField label="Product Name *" error={errors.name}>
-            <input
-              value={form.name}
-              onChange={e => updateField('name', e.target.value)}
-              onBlur={handleNameBlur}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </FormField>
-          <FormField label="SKU">
-            <input value={form.sku} onChange={e => updateField('sku', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </FormField>
-        </div>
+        <FormField label="Product Name *" error={errors.name}>
+          <input
+            value={form.name}
+            onChange={e => updateField('name', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+        </FormField>
         <FormField label="Description">
           <textarea value={form.description} onChange={e => updateField('description', e.target.value.slice(0, 500))} rows={3} maxLength={500} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
           <p className="text-xs text-gray-500 mt-1">{form.description.length}/500</p>
@@ -271,28 +254,35 @@ export default function NewProductPage() {
             )}
           </label>
         </div>
-        <FormField label="Or paste image URLs (one per line)">
-          <textarea value={form.imageUrls} onChange={e => updateField('imageUrls', e.target.value)} rows={2} placeholder="https://example.com/image.jpg" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-        </FormField>
       </div>
 
-      {/* Pricing */}
+      {/* Pricing — same as edit page: Price → Discount % → Final Price */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h2 className="font-semibold text-gray-900">Pricing</h2>
-        <div className="grid md:grid-cols-3 gap-4">
-          <FormField label="Base Price (৳) *" error={errors.basePrice}>
-            <input type="number" value={form.basePrice} onChange={e => updateField('basePrice', e.target.value)} min="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+        <div className="grid md:grid-cols-3 gap-4 items-end">
+          <FormField label="Price (৳) *" error={errors.basePrice}>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">৳</span>
+              <input type="number" value={form.basePrice} onChange={e => updateField('basePrice', e.target.value)} min="0" className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
           </FormField>
-          <FormField label="Sale Price (৳)" error={errors.salePrice}>
-            <input type="number" value={form.salePrice} onChange={e => updateField('salePrice', e.target.value)} min="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+          <FormField label="Discount %" error={errors.discountPercent}>
+            <div className="relative">
+              <input type="number" min="0" max="99" value={form.discountPercent} onChange={e => updateField('discountPercent', e.target.value)} placeholder="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
+            </div>
           </FormField>
           <div>
-            <label className="block text-sm font-medium text-gray-800 mb-1">Discount</label>
-            <div className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-700">
-              {form.salePrice && Number(form.salePrice) < Number(form.basePrice) ? `${Math.round(((Number(form.basePrice) - Number(form.salePrice)) / Number(form.basePrice)) * 100)}% OFF` : 'No discount'}
+            <label className="block text-sm font-medium text-gray-800 mb-1">Final Price</label>
+            <div className="flex items-center gap-2 h-[38px] px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+              <span className="text-lg font-bold text-green-600">{formatCurrency(finalPrice)}</span>
+              {discNum > 0 && <span className="text-xs text-gray-400 line-through">{formatCurrency(baseNum)}</span>}
             </div>
           </div>
         </div>
+        <FormField label="Purchase Price (cost)">
+          <input type="number" value={form.purchasePrice} onChange={e => updateField('purchasePrice', e.target.value)} min="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none max-w-xs" />
+        </FormField>
       </div>
 
       {/* Variants */}
@@ -319,29 +309,23 @@ export default function NewProductPage() {
         ))}
       </div>
 
-      {/* Inventory */}
+      {/* Inventory — only Current Stock and Low Threshold */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h2 className="font-semibold text-gray-900">Inventory</h2>
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
           <FormField label="Current Stock"><input type="number" value={form.inventory} onChange={e => updateField('inventory', e.target.value)} min="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></FormField>
           <FormField label="Low Stock Threshold"><input type="number" value={form.lowStockThreshold} onChange={e => updateField('lowStockThreshold', e.target.value)} min="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></FormField>
-          <FormField label="Purchase Price (৳)"><input type="number" value={form.purchasePrice} onChange={e => updateField('purchasePrice', e.target.value)} min="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></FormField>
         </div>
-        <FormField label="Location/Shelf"><input value={form.location} onChange={e => updateField('location', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></FormField>
       </div>
 
-      {/* SEO */}
+      {/* Status only — SEO hidden */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <h2 className="font-semibold text-gray-900">SEO & Visibility</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <FormField label="URL Slug"><input value={form.slug} onChange={e => updateField('slug', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></FormField>
-          <FormField label="Status">
-            <div className="flex gap-4 mt-1">{(['active', 'hidden', 'archived']).map(s => (
-              <label key={s} className="flex items-center gap-2 text-sm"><input type="radio" name="status" checked={form.status === s} onChange={() => updateField('status', s)} /><span className="capitalize">{s}</span></label>
-            ))}</div>
-          </FormField>
-        </div>
-        <FormField label="Meta Description"><textarea value={form.metaDescription} onChange={e => updateField('metaDescription', e.target.value)} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></FormField>
+        <h2 className="font-semibold text-gray-900">Visibility</h2>
+        <FormField label="Status">
+          <div className="flex gap-4 mt-1">{(['active', 'hidden', 'archived']).map(s => (
+            <label key={s} className="flex items-center gap-2 text-sm"><input type="radio" name="status" checked={form.status === s} onChange={() => updateField('status', s)} /><span className="capitalize">{s}</span></label>
+          ))}</div>
+        </FormField>
       </div>
 
       {/* Actions */}

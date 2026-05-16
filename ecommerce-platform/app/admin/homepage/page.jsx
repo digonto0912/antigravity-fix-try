@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { storage } from '@/lib/storage';
 import { useToast } from '@/hooks/useToast';
 import ToastContainer from '@/components/shared/Toast';
+import ImageCropper from '@/components/shared/ImageCropper';
 
 const DEFAULT_HERO = {
   leftHeading: 'Quick, creative gifts for Mom',
@@ -25,69 +26,33 @@ const DEFAULT_BRANDING = {
   footerLogoImage: '',
 };
 
-export default function AdminHomepagePage() {
-  const { client } = useAuth();
-  const { toasts, addToast, removeToast } = useToast();
-  const [hero, setHero] = useState(DEFAULT_HERO);
-  const [branding, setBranding] = useState(DEFAULT_BRANDING);
-  const [globalDiscount, setGlobalDiscount] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const [uploadingLeft, setUploadingLeft] = useState(false);
-  const [uploadingRight, setUploadingRight] = useState(false);
-  const [uploadingNavLogo, setUploadingNavLogo] = useState(false);
-  const [uploadingFooterLogo, setUploadingFooterLogo] = useState(false);
+// Aspect ratios: navbar = 147:40 (w:h), footer = 74:71 (w:h)
+const NAVBAR_ASPECT_RATIO = 147 / 40; // ~3.675
+const FOOTER_ASPECT_RATIO = 74 / 71;  // ~1.042
+const RATIO_TOLERANCE = 0.05; // 5% tolerance
 
-  useEffect(() => {
-    if (!client) return;
-    Promise.all([
-      storage.getHomepageHero(client.id),
-      storage.getSettings(client.id, 'branding'),
-      storage.getSettings(client.id, 'discount'),
-    ]).then(([heroData, brandingData, discountData]) => {
-      if (heroData) setHero({ ...DEFAULT_HERO, ...heroData });
-      if (brandingData) setBranding({ ...DEFAULT_BRANDING, ...brandingData });
-      if (discountData?.globalPercent) setGlobalDiscount(discountData.globalPercent);
-    });
-  }, [client]);
-
-  const handleUpload = useCallback(async (e, target) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const setters = {
-      left: setUploadingLeft, right: setUploadingRight,
-      navLogo: setUploadingNavLogo, footerLogo: setUploadingFooterLogo,
+function checkAspectRatio(file, targetRatio) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const fileRatio = img.naturalWidth / img.naturalHeight;
+      const diff = Math.abs(fileRatio - targetRatio) / targetRatio;
+      resolve({ matches: diff <= RATIO_TOLERANCE, width: img.naturalWidth, height: img.naturalHeight });
+      URL.revokeObjectURL(img.src);
     };
-    setters[target](true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.url) {
-        if (target === 'left') setHero(prev => ({ ...prev, leftImage: data.url }));
-        else if (target === 'right') setHero(prev => ({ ...prev, rightImage: data.url }));
-        else if (target === 'navLogo') setBranding(prev => ({ ...prev, navbarLogoImage: data.url }));
-        else if (target === 'footerLogo') setBranding(prev => ({ ...prev, footerLogoImage: data.url }));
-      }
-    } catch (err) { console.error('Upload failed:', err); }
-    setters[target](false);
-  }, []);
+    img.onerror = () => resolve({ matches: false, width: 0, height: 0 });
+    img.src = URL.createObjectURL(file);
+  });
+}
 
-  const save = async () => {
-    if (!client) return;
-    setSaving(true);
-    await Promise.all([
-      storage.saveHomepageHero(client.id, hero),
-      storage.saveSettings(client.id, 'branding', branding),
-      storage.saveSettings(client.id, 'discount', { globalPercent: Number(globalDiscount) }),
-    ]);
-    addToast('Settings saved!', 'success');
-    setSaving(false);
-  };
-
-  const LogoUploadField = ({ label, type, text, image, onTypeChange, onTextChange, onImageClear, uploadTarget, uploading }) => (
+// LogoUploadField defined outside component to prevent focus loss
+function LogoUploadField({ label, type, text, image, onTypeChange, onTextChange, onImageClear, onFileSelect, uploading, previewStyle, ratio }) {
+  return (
     <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
       <h3 className="text-sm font-semibold text-gray-700">{label}</h3>
+      <div className="text-xs text-gray-400 mb-1">
+        Required ratio: {ratio} — images not matching this ratio will be cropped before upload.
+      </div>
       <div className="flex gap-3">
         <label className={`flex-1 p-3 rounded-lg border-2 cursor-pointer text-center text-sm font-medium transition-all ${type === 'text' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
           <input type="radio" className="sr-only" checked={type === 'text'} onChange={() => onTypeChange('text')} />
@@ -103,19 +68,128 @@ export default function AdminHomepagePage() {
       ) : (
         <div className="flex items-center gap-4">
           {image && (
-            <div className="relative h-12 rounded-lg overflow-hidden border border-gray-200 bg-white px-2 flex items-center">
-              <img src={image} alt="" className="h-8 object-contain" />
+            <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-white px-2 flex items-center" style={previewStyle}>
+              <img src={image} alt="" className="w-full h-full object-contain" />
               <button onClick={onImageClear} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">×</button>
             </div>
           )}
           <label className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm cursor-pointer hover:bg-gray-50 transition-colors">
-            <input type="file" accept="image/*" onChange={e => handleUpload(e, uploadTarget)} className="hidden" />
+            <input type="file" accept="image/*" onChange={onFileSelect} className="hidden" />
             {uploading ? 'Uploading...' : '📷 Upload'}
           </label>
         </div>
       )}
     </div>
   );
+}
+
+export default function AdminHomepagePage() {
+  const { client } = useAuth();
+  const { toasts, addToast, removeToast } = useToast();
+  const [hero, setHero] = useState(DEFAULT_HERO);
+  const [branding, setBranding] = useState(DEFAULT_BRANDING);
+  const [globalDiscount, setGlobalDiscount] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [uploadingLeft, setUploadingLeft] = useState(false);
+  const [uploadingRight, setUploadingRight] = useState(false);
+  const [uploadingNavLogo, setUploadingNavLogo] = useState(false);
+  const [uploadingFooterLogo, setUploadingFooterLogo] = useState(false);
+
+  // Cropper state
+  const [cropperData, setCropperData] = useState(null);
+  // { imageSrc, aspectRatio, target, label }
+
+  useEffect(() => {
+    if (!client) return;
+    Promise.all([
+      storage.getHomepageHero(client.id),
+      storage.getSettings(client.id, 'branding'),
+      storage.getSettings(client.id, 'discount'),
+    ]).then(([heroData, brandingData, discountData]) => {
+      if (heroData) setHero({ ...DEFAULT_HERO, ...heroData });
+      if (brandingData) setBranding({ ...DEFAULT_BRANDING, ...brandingData });
+      if (discountData?.globalPercent) setGlobalDiscount(discountData.globalPercent);
+    });
+  }, [client]);
+
+  // Upload a file (blob or File) to the API
+  const uploadFile = useCallback(async (fileOrBlob, target) => {
+    const setters = {
+      left: setUploadingLeft, right: setUploadingRight,
+      navLogo: setUploadingNavLogo, footerLogo: setUploadingFooterLogo,
+    };
+    setters[target](true);
+    try {
+      const formData = new FormData();
+      formData.append('file', fileOrBlob);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.url) {
+        if (target === 'left') setHero(prev => ({ ...prev, leftImage: data.url }));
+        else if (target === 'right') setHero(prev => ({ ...prev, rightImage: data.url }));
+        else if (target === 'navLogo') setBranding(prev => ({ ...prev, navbarLogoImage: data.url }));
+        else if (target === 'footerLogo') setBranding(prev => ({ ...prev, footerLogoImage: data.url }));
+      }
+    } catch (err) { console.error('Upload failed:', err); }
+    setters[target](false);
+  }, []);
+
+  // Handle logo file selection — check ratio, show cropper if needed
+  const handleLogoFileSelect = useCallback(async (e, target) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const targetRatio = target === 'navLogo' ? NAVBAR_ASPECT_RATIO : FOOTER_ASPECT_RATIO;
+    const label = target === 'navLogo' ? 'Navbar Logo (147:40)' : 'Footer Logo (74:71)';
+
+    const { matches } = await checkAspectRatio(file, targetRatio);
+
+    if (matches) {
+      // Ratio already matches — upload directly
+      await uploadFile(file, target);
+    } else {
+      // Need cropping — show cropper
+      const objectUrl = URL.createObjectURL(file);
+      setCropperData({ imageSrc: objectUrl, aspectRatio: targetRatio, target, label });
+    }
+
+    // Reset input so the same file can be selected again
+    e.target.value = '';
+  }, [uploadFile]);
+
+  // Handle crop result
+  const handleCropComplete = useCallback(async (blob) => {
+    if (!cropperData) return;
+    const target = cropperData.target;
+    // Clean up object URL
+    URL.revokeObjectURL(cropperData.imageSrc);
+    setCropperData(null);
+    await uploadFile(blob, target);
+  }, [cropperData, uploadFile]);
+
+  const handleCropCancel = useCallback(() => {
+    if (cropperData) URL.revokeObjectURL(cropperData.imageSrc);
+    setCropperData(null);
+  }, [cropperData]);
+
+  // Handle hero image upload (no cropping needed)
+  const handleHeroUpload = useCallback(async (e, target) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadFile(file, target);
+  }, [uploadFile]);
+
+  const save = async () => {
+    if (!client) return;
+    setSaving(true);
+    await Promise.all([
+      storage.saveHomepageHero(client.id, hero),
+      storage.saveSettings(client.id, 'branding', branding),
+      storage.saveSettings(client.id, 'discount', { globalPercent: Number(globalDiscount) }),
+    ]);
+    addToast('Settings saved!', 'success');
+    setSaving(false);
+  };
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -130,22 +204,26 @@ export default function AdminHomepagePage() {
           type={branding.navbarLogoType}
           text={branding.navbarLogoText}
           image={branding.navbarLogoImage}
-          onTypeChange={t => setBranding({ ...branding, navbarLogoType: t })}
-          onTextChange={v => setBranding({ ...branding, navbarLogoText: v })}
-          onImageClear={() => setBranding({ ...branding, navbarLogoImage: '' })}
-          uploadTarget="navLogo"
+          onTypeChange={t => setBranding(prev => ({ ...prev, navbarLogoType: t }))}
+          onTextChange={v => setBranding(prev => ({ ...prev, navbarLogoText: v }))}
+          onImageClear={() => setBranding(prev => ({ ...prev, navbarLogoImage: '' }))}
+          onFileSelect={e => handleLogoFileSelect(e, 'navLogo')}
           uploading={uploadingNavLogo}
+          previewStyle={{ width: '147px', height: '40px' }}
+          ratio="147 × 40 (W×H)"
         />
         <LogoUploadField
           label="Footer Logo"
           type={branding.footerLogoType}
           text={branding.footerLogoText}
           image={branding.footerLogoImage}
-          onTypeChange={t => setBranding({ ...branding, footerLogoType: t })}
-          onTextChange={v => setBranding({ ...branding, footerLogoText: v })}
-          onImageClear={() => setBranding({ ...branding, footerLogoImage: '' })}
-          uploadTarget="footerLogo"
+          onTypeChange={t => setBranding(prev => ({ ...prev, footerLogoType: t }))}
+          onTextChange={v => setBranding(prev => ({ ...prev, footerLogoText: v }))}
+          onImageClear={() => setBranding(prev => ({ ...prev, footerLogoImage: '' }))}
+          onFileSelect={e => handleLogoFileSelect(e, 'footerLogo')}
           uploading={uploadingFooterLogo}
+          previewStyle={{ width: '74px', height: '71px' }}
+          ratio="74 × 71 (W×H)"
         />
       </div>
 
@@ -197,7 +275,7 @@ export default function AdminHomepagePage() {
                 </div>
               )}
               <label className="px-3 py-2 bg-gray-100 rounded-lg text-sm cursor-pointer hover:bg-gray-200 transition-colors">
-                <input type="file" accept="image/*" onChange={e => handleUpload(e, 'left')} className="hidden" />
+                <input type="file" accept="image/*" onChange={e => handleHeroUpload(e, 'left')} className="hidden" />
                 {uploadingLeft ? 'Uploading...' : '📷 Upload Image'}
               </label>
             </div>
@@ -234,7 +312,7 @@ export default function AdminHomepagePage() {
                 </div>
               )}
               <label className="px-3 py-2 bg-gray-100 rounded-lg text-sm cursor-pointer hover:bg-gray-200 transition-colors">
-                <input type="file" accept="image/*" onChange={e => handleUpload(e, 'right')} className="hidden" />
+                <input type="file" accept="image/*" onChange={e => handleHeroUpload(e, 'right')} className="hidden" />
                 {uploadingRight ? 'Uploading...' : '📷 Upload Image'}
               </label>
             </div>
@@ -250,6 +328,17 @@ export default function AdminHomepagePage() {
       </div>
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+
+      {/* Image Cropper Modal */}
+      {cropperData && (
+        <ImageCropper
+          imageSrc={cropperData.imageSrc}
+          aspectRatio={cropperData.aspectRatio}
+          onCrop={handleCropComplete}
+          onCancel={handleCropCancel}
+          label={cropperData.label}
+        />
+      )}
     </div>
   );
 }

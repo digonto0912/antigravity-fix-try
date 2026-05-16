@@ -560,8 +560,8 @@
 }
 
 .sf-footer-app__icon {
-  width: 72px;
-  height: 72px;
+  width: 74px;
+  height: 71px;
   background: var(--sf-orange);
   border-radius: var(--sf-radius-sm);
   display: flex;
@@ -892,16 +892,24 @@
 }
 
 /* ===== LOGO IMAGE ===== */
+/* Navbar logo: ratio 147:40 (w:h) — fixed container */
 .sf-header__logo-img {
-  height: 32px;
-  width: auto;
+  height: 40px;
+  width: 147px;
+  max-width: 147px;
+  max-height: 40px;
   object-fit: contain;
+  object-position: left center;
 }
 
+/* Footer logo: ratio 74:71 (w:h) — fixed container */
 .sf-footer-app__logo-img {
-  height: 28px;
-  width: auto;
+  width: 74px;
+  height: 71px;
+  max-width: 74px;
+  max-height: 71px;
   object-fit: contain;
+  object-position: center;
 }
 
 .sf-footer-app__logo-text {

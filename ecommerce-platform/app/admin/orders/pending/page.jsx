@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { storage } from '@/lib/storage';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
@@ -8,10 +8,16 @@ import Badge from '@/components/shared/Badge';
 export default function PendingOrdersPage() {
   const { client } = useAuth();
   const [orders, setOrders] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = async () => { if (client) { const all = await storage.getOrders(client.id); setOrders(all.filter(o => o.status === 'pending')); } };
-  useEffect(() => { load(); }, [client]);
-  useEffect(() => { const t = setInterval(() => { load(); }, 30000); return () => clearInterval(t); }, [client]);
+  const load = useCallback(async () => { if (client) { const all = await storage.getOrders(client.id); setOrders(all.filter(o => o.status === 'pending')); } }, [client]);
+  useEffect(() => { load(); }, [load]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  };
 
   const process = async (id) => {
     if (!client) return;
@@ -31,7 +37,14 @@ export default function PendingOrdersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Pending Orders</h1>
-        <span className="text-sm text-gray-500">Auto-refreshes every 30s</span>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors disabled:opacity-50"
+        >
+          <span className={refreshing ? 'animate-spin' : ''}>🔄</span>
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
       {orders.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center"><span className="text-4xl">🎉</span><h3 className="text-lg font-semibold mt-4">No Pending Orders</h3><p className="text-gray-500 mt-1">All orders have been processed</p></div>
@@ -55,10 +68,10 @@ export default function PendingOrdersPage() {
                   </div>
                 </div>
               </div>
-              <div className="mt-3 pt-3 border-t border-gray-100">
+              {/* <div className="mt-3 pt-3 border-t border-gray-100">
                 <div className="text-sm text-gray-500 mb-1">Items: {o.items.map(i => `${i.productName} ×${i.quantity}`).join(', ')}</div>
                 <input defaultValue={o.notes || ''} onBlur={e => addNote(o.id, e.target.value)} placeholder="Add note..." className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm mt-1" />
-              </div>
+              </div> */}
             </div>
           ))}
         </div>
@@ -66,3 +79,4 @@ export default function PendingOrdersPage() {
     </div>
   );
 }
+

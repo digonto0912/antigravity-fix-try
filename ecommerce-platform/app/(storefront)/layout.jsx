@@ -283,10 +283,33 @@ export default function StorefrontLayout({ children }) {
                 const found = customers.find(c => c.email === customer.email);
                 if (found) await storage.updateCustomer(cid, found.id, { phone: phoneNumber.trim() });
               } else {
+                // Save to lead tracking
                 const visitor = getVisitorId();
                 const leads = await storage.getLeads(cid);
                 const lead = leads.find(l => l.sessionId === visitor.fingerprintId);
                 if (lead) await storage.updateLead(cid, lead.id, { phone: phoneNumber.trim() });
+
+                // Also create a customer record so they show in All Customers
+                const allCusts = await storage.getCustomers(cid);
+                const existingCust = allCusts.find(c => c.phone === phoneNumber.trim());
+                if (!existingCust) {
+                  const now = new Date().toISOString();
+                  await storage.addCustomer(cid, {
+                    id: Date.now().toString(36) + Math.random().toString(36).substr(2, 9),
+                    clientId: cid,
+                    name: 'Phone Subscriber',
+                    phone: phoneNumber.trim(),
+                    email: '',
+                    addresses: [],
+                    totalOrders: 0,
+                    totalSpent: 0,
+                    loyaltyPoints: 0,
+                    loyaltyHistory: [],
+                    tags: ['phone-subscriber'],
+                    createdAt: now,
+                    updatedAt: now,
+                  });
+                }
               }
               setPhoneSaved(true);
               setPhoneNumber('');
